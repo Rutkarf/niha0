@@ -1,0 +1,30 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+niha0:
+  jwt:
+    # Required — no default. Validated by ProdSecurityValidator.
+    secret: ${JWT_SECRET}
+  cors:
+    allowed-origins: ${CORS_ORIGINS}
+  security:
+    demo-login-enabled: ${DEMO_LOGIN_ENABLED:false}
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    com.sasurd.niha0: INFO
+  pattern:
+    # Key=value structured console logs for aggregation (Phase 21).
+    console: "ts=%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%level logger=%logger{36} thread=%thread msg=%msg%n"

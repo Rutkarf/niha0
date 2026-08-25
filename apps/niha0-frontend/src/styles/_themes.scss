@@ -1,0 +1,101 @@
+/* Night Ops — deep slate + cyan (restrained, enterprise-ready) */
+.theme-cyberpunk {
+  --bg-primary: #0f1724;
+  --bg-secondary: #152033;
+  --bg-elevated: #1b2a42;
+  --bg-hover: #243552;
+  --bg-surface: color-mix(in srgb, #1b2a42 88%, #36b8ff 12%);
+  --text-primary: #eef3f9;
+  --text-secondary: #b4c0d0;
+  --text-muted: #93a4b8;
+  --accent-primary: #3ec4ff;
+  --accent-secondary: #5eead4;
+  --accent-tertiary: #94a3b8;
+  --accent-magenta: #67e8f9;
+  --accent-pink: #7dd3fc;
+  --accent-success: #34d399;
+  --accent-warning: #f5c84c;
+  --accent-danger: #f87171;
+  --accent-info: #3ec4ff;
+  --on-danger: #ffffff;
+  --on-warning: #1a1200;
+  --border-color: rgba(148, 163, 184, 0.22);
+  --border-strong: rgba(62, 196, 255, 0.35);
+  --border-glow: rgba(62, 196, 255, 0.22);
+  --shadow-neon: 0 12px 40px rgba(0, 0, 0, 0.35);
+  --gradient-header: linear-gradient(120deg, #0f1724 0%, #152033 45%, #163047 100%);
+  --gradient-page:
+    radial-gradient(1200px 500px at 12% -10%, rgba(62, 196, 255, 0.12), transparent 55%),
+    radial-gradient(900px 420px at 88% 0%, rgba(94, 234, 212, 0.08), transparent 50%),
+    linear-gradient(180deg, #0f1724 0%, #121c2c 100%);
+  --sidebar-width: 165px;
+  --sidebar-collapsed: 56px;
+  --scene-bg: #0f1724;
+  --scene-floor: #1a2740;
+  --scene-accent: #3ec4ff;
+  --scene-ceo: #5eead4;
+  --on-accent: #041018;
+}
+
+/* Solar Ops — forest digital, calm B2B */
+.theme-solarpunk {
+  --bg-primary: #edf5f0;
+  --bg-secondary: #f7fbf8;
+  --bg-elevated: #ffffff;
+  --bg-hover: #e2efe8;
+  --bg-surface: color-mix(in srgb, #ffffff 92%, #1f9d6a 8%);
+  --text-primary: #123328;
+  --text-secondary: #355548;
+  --text-muted: #4f6b5f;
+  --accent-primary: #1f9d6a;
+  --accent-secondary: #0f8a8a;
+  --accent-tertiary: #4ade80;
+  --accent-magenta: #1f9d6a;
+  --accent-pink: #e8b84a;
+  --accent-success: #1f9d6a;
+  --accent-warning: #d97706;
+  --accent-danger: #dc2626;
+  --accent-info: #0f8a8a;
+  --on-danger: #ffffff;
+  --on-warning: #1a1200;
+  --border-color: rgba(31, 157, 106, 0.18);
+  --border-strong: rgba(31, 157, 106, 0.35);
+  --border-glow: rgba(31, 157, 106, 0.2);
+  --shadow-neon: 0 10px 28px rgba(18, 51, 40, 0.08);
+  --gradient-header: linear-gradient(120deg, #edf5f0 0%, #e4f2eb 50%, #f7fbf8 100%);
+  --gradient-page:
+    radial-gradient(1100px 480px at 8% -8%, rgba(31, 157, 106, 0.12), transparent 55%),
+    radial-gradient(800px 380px at 92% 4%, rgba(15, 138, 138, 0.08), transparent 50%),
+    linear-gradient(180deg, #edf5f0 0%, #e8f1ec 100%);
+  --sidebar-width: 165px;
+  --sidebar-collapsed: 56px;
+  --scene-bg: #b8d9c8;
+  --scene-floor: #bfa67a;
+  --scene-accent: #178f5e;
+  --scene-ceo: #d4a017;
+  --on-accent: #042016;
+}
+
+/* High-contrast accessibility overlay (T46) */
+body.high-contrast {
+  --text-primary: #000;
+  --text-secondary: #111;
+  --text-muted: #222;
+  --border-color: #000;
+  --border-strong: #000;
+  --accent-primary: #0000ee;
+  --accent-danger: #cc0000;
+  --accent-success: #006600;
+}
+
+body.high-contrast.theme-cyberpunk {
+  --text-primary: #fff;
+  --text-secondary: #f0f0f0;
+  --text-muted: #ddd;
+  --border-color: #fff;
+  --border-strong: #fff;
+  --accent-primary: #6cf;
+  --bg-primary: #000;
+  --bg-secondary: #111;
+  --bg-elevated: #1a1a1a;
+}

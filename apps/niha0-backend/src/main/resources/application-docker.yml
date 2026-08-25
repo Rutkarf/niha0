@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/niha0}
+    username: ${SPRING_DATASOURCE_USERNAME:niha0}
+    password: ${SPRING_DATASOURCE_PASSWORD:niha0}
+
+niha0:
+  jwt:
+    secret: ${JWT_SECRET:niha0-dev-secret-change-in-production-min-256-bits-long-key!!}

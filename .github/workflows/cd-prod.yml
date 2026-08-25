@@ -1,0 +1,63 @@
+name: CD Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Git SHA or semver tag to deploy"
+        required: true
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: CI gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/niha0-frontend/package-lock.json
+      - name: Backend tests
+        working-directory: apps/niha0-backend
+        run: ./mvnw -B test
+      - name: Frontend lint & test
+        working-directory: apps/niha0-frontend
+        run: |
+          npm ci
+          npm run lint
+          npm run test -- --watch=false
+          npm run build
+
+  deploy:
+    name: Deploy production
+    needs: gate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Documented deploy hook
+        env:
+          DEPLOY_HOST: ${{ secrets.PROD_DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.PROD_SSH_KEY }}
+        run: |
+          echo "Configure PROD_DEPLOY_HOST + PROD_SSH_KEY (or Fly API token) in GitHub environment 'production'."
+          echo "Tag/ref: ${{ github.event.inputs.image_tag || github.ref_name }}"
+          echo "Recommended: flyctl deploy --config infra/fly.toml  OR  ssh compose pull && up -d"
+          echo "Rollback: redeploy previous tag; Flyway is forward-only — keep DB backups."
+          if [ -z "$DEPLOY_HOST" ]; then
+            echo "No PROD_DEPLOY_HOST secret — dry-run only (OK for template)."
+            exit 0
+          fi
+          echo "Host configured — wire your deploy script here."

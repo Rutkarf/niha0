@@ -1,0 +1,30 @@
+# Optional observability stack — use with:
+#   docker compose -f docker-compose.yml -f infra/docker-compose.observability.yml up -d
+services:
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    container_name: niha0-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: niha0-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  frontend:
+    name: Frontend build & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/niha0-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/niha0-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test -- --watch=false
+      - run: npm run build
+
+  backend:
+    name: Backend build & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/niha0-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: ./mvnw -B test
+      - run: ./mvnw -B -DskipTests package
+
+  docker-paths:
+    name: Docker compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose files
+        run: |
+          docker compose -f docker-compose.dev.yml config >/dev/null
+          JWT_SECRET='ci-test-secret-at-least-forty-eight-characters-long!!' \
+          POSTGRES_PASSWORD='ci-strong-db-password' \
+          CORS_ORIGINS='http://localhost' \
+          STORAGE_S3_ACCESS_KEY='ci-access' \
+          STORAGE_S3_SECRET_KEY='ci-secret-key' \
+          docker compose -f docker-compose.yml config >/dev/null
+          docker compose -f infra/docker-compose.yml config >/dev/null

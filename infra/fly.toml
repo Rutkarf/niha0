@@ -1,0 +1,37 @@
+# Fly.io — NIHAO backend (template)
+
+# Usage:
+#   fly apps create niha0-api
+#   fly secrets set JWT_SECRET=... SPRING_DATASOURCE_URL=... ...
+#   fly deploy -c infra/fly.toml
+#
+# Frontend: separate static app (Fly + nginx image) or CDN; API at https://api.example.com/api
+
+app = 'niha0-api'
+primary_region = 'cdg'
+
+[build]
+  dockerfile = 'apps/niha0-backend/Dockerfile'
+
+[env]
+  SPRING_PROFILES_ACTIVE = 'prod'
+  SERVER_PORT = '8080'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = '15s'
+    timeout = '5s'
+    grace_period = '30s'
+    method = 'GET'
+    path = '/api/actuator/health'
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

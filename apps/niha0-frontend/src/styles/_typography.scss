@@ -1,0 +1,72 @@
+/* Typography utilities — consume --fs-* / --fw-* / --lh-* from _variables.scss */
+
+.text-display {
+  font-family: var(--font-display);
+  font-size: clamp(var(--fs-3xl), 2rem + 2vw, var(--fs-4xl));
+  font-weight: var(--fw-extrabold);
+  letter-spacing: 0.06em;
+  line-height: var(--lh-tight);
+}
+
+.text-h1 {
+  font-family: var(--font-display);
+  font-size: clamp(var(--fs-xl), 1.1rem + 0.8vw, var(--fs-2xl));
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-tight);
+}
+
+.text-h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-tight);
+}
+
+.text-h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  line-height: var(--lh-snug);
+}
+
+.text-body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  color: var(--text-primary);
+}
+
+.text-body-sm {
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  color: var(--text-secondary);
+}
+
+.text-caption {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  color: var(--text-muted);
+}
+
+.text-label {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.text-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}

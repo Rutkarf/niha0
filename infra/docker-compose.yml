@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: niha0-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-niha0}
+      POSTGRES_USER: ${POSTGRES_USER:-niha0}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-niha0}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-niha0} -d ${POSTGRES_DB:-niha0}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ../apps/niha0-backend
+      dockerfile: Dockerfile
+    container_name: niha0-backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-niha0}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-niha0}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-niha0}
+      SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: ${JWT_SECRET:-niha0-dev-secret-change-in-production-min-256-bits-long-key!!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200,http://localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ../apps/niha0-frontend
+      dockerfile: Dockerfile
+    container_name: niha0-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-4200}:4200"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: niha0-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:

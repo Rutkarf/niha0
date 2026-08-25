@@ -1,0 +1,93 @@
+/**
+ * NIHAO design tokens — structural (theme-agnostic).
+ * Color / gradient tokens live in _themes.scss (.theme-cyberpunk / .theme-solarpunk).
+ * TypeScript mirror: src/app/shared/design-tokens.ts
+ */
+
+:root {
+  /* —— Typography families —— */
+  --font-display: 'Syne', 'Avenir Next', sans-serif;
+  --font-sans: 'Outfit', 'Avenir Next', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+
+  /* —— Type scale (4px-aligned rem) —— */
+  --fs-xs: 0.6875rem; /* 11px — captions, soon-pills */
+  --fs-sm: 0.75rem; /* 12px — labels dense, meta */
+  --fs-md: 0.875rem; /* 14px — body UI, buttons */
+  --fs-base: 1rem; /* 16px — body reading */
+  --fs-lg: 1.125rem; /* 18px — section lead */
+  --fs-xl: 1.25rem; /* 20px — card titles */
+  --fs-2xl: 1.5rem; /* 24px — page h1 floor */
+  --fs-3xl: 1.875rem; /* 30px — marketing */
+  --fs-4xl: 2.25rem; /* 36px — brand hero */
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extrabold: 800;
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-normal: 1.55;
+
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0.01em;
+  --tracking-wide: 0.06em;
+  --tracking-label: 0.08em;
+
+  /* —— Spacing (4 / 8 / 12 / 16 / 24 / 32 / 40 / 48) —— */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 3rem;
+
+  /* —— Radii —— */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 999px;
+
+  /* —— Elevation —— */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.12);
+
+  /* —— Motion —— */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition: var(--duration-base) var(--ease-standard);
+
+  /* —— Layout chrome —— */
+  --sidebar-width: 165px;
+  --sidebar-collapsed: 56px;
+  --header-height: 58px;
+  --page-max-width: 1280px;
+  --control-height: 2.5rem;
+  --control-height-sm: 2rem;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* —— Z-index scale —— */
+  --z-sticky: 15;
+  --z-sidebar: 20;
+  --z-dropdown: 50;
+  --z-fab: 60;
+  --z-overlay: 100;
+  --z-toast: 200;
+  --z-modal: 300;
+
+  /* —— Semantic fallbacks (overridden by themes) —— */
+  --accent-info: var(--accent-primary);
+  --on-danger: #ffffff;
+  --on-warning: #1a1200;
+  --focus-ring: color-mix(in srgb, var(--accent-primary) 70%, transparent);
+  --overlay-scrim: rgba(8, 12, 20, 0.55);
+}

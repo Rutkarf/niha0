@@ -1,0 +1,116 @@
+spring:
+  application:
+    name: niha0-backend
+  profiles:
+    default: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/niha0
+    username: niha0
+    password: niha0
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration
+      - org.springframework.boot.security.oauth2.client.autoconfigure.reactive.ReactiveOAuth2ClientAutoConfiguration
+      - org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+niha0:
+  jwt:
+    # Overridden by profile `local` (dev default) or JWT_SECRET. Profile `prod` requires a strong secret.
+    secret: ${JWT_SECRET:}
+    previous-secret: ${JWT_PREVIOUS_SECRET:}
+    access-token-expiration-ms: 3600000
+    refresh-token-expiration-ms: 604800000
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200,http://localhost}
+  storage:
+    # local (dev default) | minio | s3 — local is rejected by ProdSecurityValidator
+    mode: ${STORAGE_MODE:local}
+    local-root: ${STORAGE_LOCAL_ROOT:./data/object-storage}
+    s3:
+      endpoint: ${STORAGE_S3_ENDPOINT:}
+      region: ${STORAGE_S3_REGION:us-east-1}
+      access-key: ${STORAGE_S3_ACCESS_KEY:}
+      secret-key: ${STORAGE_S3_SECRET_KEY:}
+      bucket: ${STORAGE_S3_BUCKET:niha0}
+      path-style: ${STORAGE_S3_PATH_STYLE:true}
+      signed-url-ttl-seconds: ${STORAGE_SIGNED_URL_TTL:300}
+  security:
+    # When false (prod default), login is rejected for known Flyway demo emails.
+    demo-login-enabled: ${DEMO_LOGIN_ENABLED:true}
+    # Cookie CSRF double-submit (XSRF-TOKEN). Keep false while API uses Bearer access tokens.
+    # Enable when migrating access token to cookies — see docs/adr/008-csrf-cookie-prep.md
+    csrf-enabled: ${CSRF_ENABLED:false}
+  rag:
+    embedding-provider: ${RAG_EMBEDDING_PROVIDER:hash} # hash|openai
+    embedding-dims: 384
+    openai:
+      model: ${RAG_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+  ai:
+    # mock (default) | openai (OpenAI-compatible chat completions)
+    provider: ${AI_PROVIDER:mock}
+    openai:
+      base-url: ${AI_OPENAI_BASE_URL:https://api.openai.com/v1}
+      api-key: ${AI_OPENAI_API_KEY:}
+      model: ${AI_OPENAI_MODEL:gpt-4o-mini}
+      timeout-ms: ${AI_OPENAI_TIMEOUT_MS:20000}
+      allow-demo-fallback: ${AI_OPENAI_ALLOW_DEMO_FALLBACK:true}
+  billing:
+    provider: ${BILLING_PROVIDER:sumup} # sumup|stub
+    sumup:
+      api-base: ${SUMUP_API_BASE:https://api.sumup.com}
+      api-key: ${SUMUP_API_KEY:}
+      merchant-code: ${SUMUP_MERCHANT_CODE:}
+      webhook-secret: ${SUMUP_WEBHOOK_SECRET:}
+      currency: ${SUMUP_CURRENCY:EUR}
+      redirect-url: ${SUMUP_REDIRECT_URL:http://localhost:4200/app/settings?billing=success}
+      prices:
+        PRO: ${SUMUP_PRICE_PRO_CENTS:4900}
+        BUSINESS: ${SUMUP_PRICE_BUSINESS_CENTS:14900}
+  mail:
+    mode: ${MAIL_MODE:log}
+    from: ${MAIL_FROM:noreply@nihao.local}
+  app:
+    public-url: ${APP_PUBLIC_URL:http://localhost:4200}
+  oauth2:
+    enabled: ${OAUTH2_ENABLED:false}
+  realtime:
+    mode: ${REALTIME_MODE:memory} # memory|redis
+    redis-url: ${NIHA0_REALTIME_REDIS_URL:}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.sasurd.niha0: INFO

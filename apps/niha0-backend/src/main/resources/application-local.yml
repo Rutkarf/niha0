@@ -1,0 +1,9 @@
+# Local / default profile keeps a known-weak secret for developer convenience.
+# Profile `prod` requires JWT_SECRET and rejects this default (ProdSecurityValidator).
+spring:
+  config:
+    activate:
+      on-profile: local
+niha0:
+  jwt:
+    secret: ${JWT_SECRET:niha0-dev-secret-change-in-production-min-256-bits-long-key!!}

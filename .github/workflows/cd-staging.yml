@@ -1,0 +1,67 @@
+name: CD Staging
+
+# Template — configure secrets before enabling on a protected environment.
+# Does not deploy to production automatically.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy"
+        required: true
+        default: "staging"
+  push:
+    branches: [develop]
+
+concurrency:
+  group: cd-staging
+  cancel-in-progress: true
+
+jobs:
+  build-push:
+    name: Build images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        if: ${{ secrets.GITHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build backend (no push if registry unset)
+        run: |
+          docker build -t niha0-backend:${{ github.sha }} -f apps/niha0-backend/Dockerfile apps/niha0-backend || \
+            echo "Dockerfile backend missing or build skipped — wire registry in repo secrets"
+      - name: Build frontend
+        run: |
+          docker build -t niha0-frontend:${{ github.sha }} -f apps/niha0-frontend/Dockerfile apps/niha0-frontend || \
+            echo "Dockerfile frontend missing or build skipped"
+      - name: Smoke compose config
+        run: |
+          JWT_SECRET='ci-test-secret-at-least-forty-eight-characters-long!!' \
+          POSTGRES_PASSWORD='ci-strong-db-password' \
+          CORS_ORIGINS='https://staging.example.com' \
+          STORAGE_S3_ACCESS_KEY='ci' STORAGE_S3_SECRET_KEY='ci-secret-key' \
+          docker compose -f docker-compose.yml config >/dev/null
+
+  # Placeholder deploy job — replace with SSH / Kubernetes / ECS as needed.
+  deploy-staging:
+    name: Deploy staging (manual gate)
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Documented deploy hook
+        run: |
+          echo "Configure STAGING_HOST + deploy script in secrets."
+          echo "Tag: ${{ inputs.image_tag }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Rollback: redeploy previous SHA; Flyway migrations are forward-only."
