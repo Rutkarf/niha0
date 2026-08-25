@@ -3,9 +3,10 @@ spring:
     activate:
       on-profile: prod
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    # Prefer SPRING_DATASOURCE_URL; DATABASE_URL (Render) is normalized by PostgresJdbcUrlEnvironmentPostProcessor
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL}}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
   mail:
     host: ${SPRING_MAIL_HOST:}
     port: ${SPRING_MAIL_PORT:587}
@@ -26,8 +27,11 @@ niha0:
     allowed-origins: ${CORS_ORIGINS}
   security:
     demo-login-enabled: ${DEMO_LOGIN_ENABLED:false}
-    # Cookie CSRF double-submit enabled in prod; Bearer Authorization still bypasses CSRF.
+    # Full cookie session: CSRF on + access token HttpOnly cookie (no Bearer CSRF bypass).
     csrf-enabled: ${CSRF_ENABLED:true}
+    access-cookie-enabled: ${ACCESS_COOKIE_ENABLED:true}
+  rag:
+    pgvector-enabled: ${RAG_PGVECTOR_ENABLED:true}
   storage:
     mode: ${STORAGE_MODE:minio}
   ai:

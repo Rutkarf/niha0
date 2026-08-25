@@ -68,9 +68,19 @@ niha0:
     # Cookie CSRF double-submit (XSRF-TOKEN). Keep false while API uses Bearer access tokens.
     # Enable when migrating access token to cookies — see docs/adr/008-csrf-cookie-prep.md
     csrf-enabled: ${CSRF_ENABLED:false}
+    # HttpOnly access JWT cookie (Path=/api). When true with CSRF, FE omits Bearer on mutations.
+    access-cookie-enabled: ${ACCESS_COOKIE_ENABLED:false}
+    # Disable in tests to avoid flaky 429 across SpringBootTest classes.
+    auth-rate-limit-enabled: ${AUTH_RATE_LIMIT_ENABLED:true}
+    os-api-rate-limit-enabled: ${OS_API_RATE_LIMIT_ENABLED:true}
+    # Optional cookie Domain for split-hosting (e.g. .niha0.com). Empty = host-only.
+    cookie-domain: ${COOKIE_DOMAIN:}
+    # Lax (same-site / proxied) | None (cross-site absolute API URL; requires Secure).
+    cookie-same-site: ${COOKIE_SAME_SITE:Lax}
   rag:
     embedding-provider: ${RAG_EMBEDDING_PROVIDER:hash} # hash|openai
     embedding-dims: 384
+    pgvector-enabled: ${RAG_PGVECTOR_ENABLED:false}
     openai:
       model: ${RAG_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
   ai:

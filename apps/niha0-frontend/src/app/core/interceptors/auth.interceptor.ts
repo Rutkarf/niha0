@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, from, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { environment } from '../../../environments/environment';
 
 const RETRY_HEADER = 'X-Niha0-Auth-Retry';
 
@@ -36,7 +37,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = auth.getAccessToken();
   const xsrf = readCookie('XSRF-TOKEN');
   const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  // Cookie-session mode: rely on niha0_access HttpOnly cookie (CSRF protects mutations).
+  if (!environment.accessCookieAuth && token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   if (xsrf && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(req.method.toUpperCase())) {
     headers['X-XSRF-TOKEN'] = xsrf;
   }
@@ -56,9 +60,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       return from(auth.refreshAccessToken()).pipe(
         switchMap((accessToken) => {
           const retryHeaders: Record<string, string> = {
-            Authorization: `Bearer ${accessToken}`,
             [RETRY_HEADER]: '1',
           };
+          if (!environment.accessCookieAuth) {
+            retryHeaders['Authorization'] = `Bearer ${accessToken}`;
+          }
           const retryXsrf = readCookie('XSRF-TOKEN');
           if (retryXsrf) retryHeaders['X-XSRF-TOKEN'] = retryXsrf;
           const retry = req.clone({ setHeaders: retryHeaders });

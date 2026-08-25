@@ -48,6 +48,24 @@ import { LocaleService } from '../../core/i18n/locale.service';
           <a routerLink="/register" class="btn btn-ghost">Commencer</a>
         </article>
       </div>
+
+      <h2 class="packs-title">Packs modulaires</h2>
+      <p class="packs-note">Inclus BUSINESS · add-on PRO</p>
+      <div class="grid packs">
+        <article class="plan pack">
+          <h2>Pack CRM + Sales</h2>
+          <p>Pipeline clients, leads, opportunités et devis — hub commercial unifié.</p>
+        </article>
+        <article class="plan pack">
+          <h2>Pack Ops (WMS + PIM)</h2>
+          <p>Stock, mouvements et référentiel produits / variantes pour l’opérationnel.</p>
+        </article>
+        <article class="plan pack">
+          <h2>Pack Agents Studio + Marketplace</h2>
+          <p>Studio de graphes agents, publication privée et installation marketplace.</p>
+        </article>
+      </div>
+
       <footer class="foot">
         <a routerLink="/">← Accueil</a>
         <a routerLink="/privacy">Confidentialité</a>
@@ -58,11 +76,9 @@ import { LocaleService } from '../../core/i18n/locale.service';
   styles: `
     .pricing {
       min-height: 100vh;
-      padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem;
-      background:
-        radial-gradient(ellipse 60% 40% at 90% 0%, color-mix(in oklab, var(--accent-primary) 12%, transparent), transparent),
-        var(--bg-app, #f4f6f5);
-      color: var(--text-primary, #14201c);
+      padding: 1.5rem clamp(1rem, 4vw, 3rem) 5.5rem;
+      background: var(--gradient-page);
+      color: var(--text-primary);
       font-family: var(--font-body, system-ui, sans-serif);
     }
     .top {
@@ -76,7 +92,12 @@ import { LocaleService } from '../../core/i18n/locale.service';
       font-family: var(--font-display, Georgia, serif);
       font-weight: 800;
       text-decoration: none;
-      color: inherit;
+      color: var(--text-primary);
+    }
+    .btn-ghost {
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+      background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
     }
     nav {
       display: flex;
@@ -88,7 +109,7 @@ import { LocaleService } from '../../core/i18n/locale.service';
       margin-bottom: 0.5rem;
     }
     .lead {
-      opacity: 0.8;
+      color: var(--text-secondary);
       margin-bottom: 2rem;
     }
     .grid {
@@ -97,10 +118,10 @@ import { LocaleService } from '../../core/i18n/locale.service';
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
     .plan {
-      border: 1px solid color-mix(in oklab, currentColor 12%, transparent);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 1.25rem;
-      background: var(--bg-elevated, #fff);
+      background: var(--bg-elevated);
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
@@ -124,15 +145,33 @@ import { LocaleService } from '../../core/i18n/locale.service';
       align-self: flex-start;
       text-decoration: none;
     }
+    .packs-title {
+      font-family: var(--font-display, Georgia, serif);
+      margin: 2.5rem 0 0.35rem;
+      font-size: 1.35rem;
+    }
+    .packs-note {
+      color: var(--text-muted);
+      margin: 0 0 1rem;
+      font-size: 0.9rem;
+    }
+    .pack p {
+      margin: 0;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      font-size: 0.95rem;
+    }
     .foot {
       display: flex;
       gap: 1.25rem;
       margin-top: 2.5rem;
       font-size: 0.9rem;
-      opacity: 0.7;
     }
     .foot a {
-      color: inherit;
+      color: var(--text-secondary);
+    }
+    .foot a:hover {
+      color: var(--text-primary);
     }
   `,
 })

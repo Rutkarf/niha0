@@ -3,6 +3,8 @@ package com.sasurd.niha0.rag;
 import com.sasurd.niha0.organization.CompanyDataAsset;
 import com.sasurd.niha0.organization.CompanyDataAssetRepository;
 import com.sasurd.niha0.security.SecurityUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Hybrid RAG: vector similarity when embeddings exist, keyword fallback otherwise.
+ * Hybrid RAG: pgvector ANN when enabled, else in-JVM cosine on embedding_json, else keyword.
  */
 @Service
 public class RagService {
@@ -26,17 +28,24 @@ public class RagService {
     public static final String ENGINE_KEYWORD = "keyword-rag";
     public static final String ENGINE_HYBRID = "hybrid-rag";
     public static final String ENGINE_HASH_DEMO = "hash-embedding-demo";
+    public static final String ENGINE_PGVECTOR = "pgvector";
 
     private final DocumentChunkRepository chunkRepository;
     private final CompanyDataAssetRepository dataAssetRepository;
     private final EmbeddingProvider embeddingProvider;
+    private final JdbcTemplate jdbcTemplate;
+    private final boolean pgvectorEnabled;
 
     public RagService(DocumentChunkRepository chunkRepository,
                       CompanyDataAssetRepository dataAssetRepository,
-                      EmbeddingProvider embeddingProvider) {
+                      EmbeddingProvider embeddingProvider,
+                      JdbcTemplate jdbcTemplate,
+                      @Value("${niha0.rag.pgvector-enabled:false}") boolean pgvectorEnabled) {
         this.chunkRepository = chunkRepository;
         this.dataAssetRepository = dataAssetRepository;
         this.embeddingProvider = embeddingProvider;
+        this.jdbcTemplate = jdbcTemplate;
+        this.pgvectorEnabled = pgvectorEnabled;
     }
 
     public boolean hasDemoEmbeddings() {
@@ -60,6 +69,13 @@ public class RagService {
         Map<UUID, String> names = dataAssetRepository.findByOrganizationIdOrderByCreatedAtDesc(orgId).stream()
                 .collect(Collectors.toMap(CompanyDataAsset::getId, CompanyDataAsset::getName, (a, b) -> a));
 
+        if (pgvectorEnabled) {
+            RagSearchResponse ann = pgvectorSearch(orgId, q, names, max, chunks.size());
+            if (ann != null && !ann.hits().isEmpty()) {
+                return ann;
+            }
+        }
+
         boolean vectorAvailable = chunks.stream().anyMatch(c -> c.getEmbeddingJson() != null && !c.getEmbeddingJson().isBlank());
         if (vectorAvailable) {
             RagSearchResponse vectorResult = vectorSearch(q, chunks, names, max);
@@ -72,46 +88,45 @@ public class RagService {
 
     @Transactional(readOnly = true)
     public String contextForAgent(String agentCode, int maxChars) {
-        UUID orgId = SecurityUtils.requireOrganizationId();
-        List<DocumentChunk> chunks = chunkRepository.findByOrganizationIdOrderByCreatedAtDesc(orgId);
-        if (chunks.isEmpty()) return "";
-
-        String query = agentCode == null ? "" : agentCode.trim();
-        boolean vectorAvailable = chunks.stream().anyMatch(c -> c.getEmbeddingJson() != null && !c.getEmbeddingJson().isBlank());
-        if (vectorAvailable && !query.isBlank()) {
-            Map<UUID, String> names = dataAssetRepository.findByOrganizationIdOrderByCreatedAtDesc(orgId).stream()
-                    .collect(Collectors.toMap(CompanyDataAsset::getId, CompanyDataAsset::getName, (a, b) -> a));
-            List<RagHit> hits = vectorSearch(query, chunks, names, 5).hits();
-            StringBuilder sb = new StringBuilder();
-            for (RagHit hit : hits) {
-                if (sb.length() + hit.excerpt().length() > maxChars) break;
-                if (!sb.isEmpty()) sb.append("\n---\n");
-                sb.append(hit.excerpt());
-            }
-            if (!sb.isEmpty()) return sb.toString();
-        }
-
-        String needle = query.toLowerCase(Locale.ROOT);
+        RagSearchResponse response = search(agentCode == null ? "" : agentCode, 5);
         StringBuilder sb = new StringBuilder();
-        for (DocumentChunk chunk : chunks) {
-            String c = chunk.getContent();
-            if (!needle.isBlank() && !c.toLowerCase(Locale.ROOT).contains(needle)
-                    && !c.toLowerCase(Locale.ROOT).contains("entreprise")
-                    && !c.toLowerCase(Locale.ROOT).contains("client")) {
-                continue;
-            }
-            if (sb.length() + c.length() > maxChars) break;
+        for (RagHit hit : response.hits()) {
+            if (sb.length() + hit.excerpt().length() > maxChars) break;
             if (!sb.isEmpty()) sb.append("\n---\n");
-            sb.append(c);
-        }
-        if (sb.isEmpty()) {
-            for (DocumentChunk chunk : chunks) {
-                if (sb.length() + chunk.getContent().length() > maxChars) break;
-                if (!sb.isEmpty()) sb.append("\n---\n");
-                sb.append(chunk.getContent());
-            }
+            sb.append(hit.excerpt());
         }
         return sb.toString();
+    }
+
+    private RagSearchResponse pgvectorSearch(UUID orgId, String q, Map<UUID, String> names, int max, int totalChunks) {
+        try {
+            float[] queryVector = embeddingProvider.embed(q);
+            String literal = PgVectorWriter.toVectorLiteral(queryVector);
+            List<RagHit> hits = jdbcTemplate.query(
+                    """
+                            SELECT id, data_asset_id, chunk_index, content,
+                                   (1 - (embedding <=> CAST(? AS vector))) AS score
+                            FROM document_chunks
+                            WHERE organization_id = ? AND embedding IS NOT NULL
+                            ORDER BY embedding <=> CAST(? AS vector)
+                            LIMIT ?
+                            """,
+                    (rs, rowNum) -> {
+                        UUID assetId = (UUID) rs.getObject("data_asset_id");
+                        String content = rs.getString("content");
+                        return new RagHit(
+                                (UUID) rs.getObject("id"),
+                                assetId,
+                                names.getOrDefault(assetId, "document"),
+                                rs.getInt("chunk_index"),
+                                excerpt(content, 280),
+                                Math.round(rs.getDouble("score") * 1000.0) / 1000.0);
+                    },
+                    literal, orgId, literal, max);
+            return new RagSearchResponse(q, totalChunks, ENGINE_PGVECTOR, hits);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private RagSearchResponse vectorSearch(String q, List<DocumentChunk> chunks,
@@ -200,6 +215,7 @@ public class RagService {
     }
 
     private static String excerpt(String content, int max) {
+        if (content == null) return "";
         if (content.length() <= max) return content;
         return content.substring(0, max - 1) + "…";
     }

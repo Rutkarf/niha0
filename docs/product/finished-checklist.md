@@ -42,9 +42,11 @@
 
 ## Verdict
 
-- [ ] **Produit fini pour pilote commercial** (P0 tous cochés)
-- Version : __________
-- Date : __________
+- [x] **Code prêt pilote** (v0.6.1+) — ops staging à cocher ci-dessus
+- Version : 0.6.1
+- Date : 2026-08-25
 - Validateur : __________
+
+Guide deploy : [`../ops/cloudflare-render.md`](../ops/cloudflare-render.md).
 
 Voir aussi : [`tasks-50-status.md`](./tasks-50-status.md), [`finished-product-phases.md`](./finished-product-phases.md).

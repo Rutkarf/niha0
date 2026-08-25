@@ -23,15 +23,15 @@ Puis se reconnecter pour obtenir un JWT avec le nouveau rôle.
 
 ## Checklist go / no-go
 
-- [ ] Staging HTTPS + smoke `/api/actuator/health`
+- [ ] Staging/prod HTTPS + smoke `/api/actuator/health` ([cloudflare-render](./cloudflare-render.md))
 - [ ] `DEMO_LOGIN_ENABLED=false`, pas de Demo2026!
 - [ ] SumUp sandbox testé (checkout + webhook)
 - [ ] SMTP réel (invite + reset reçus)
 - [ ] `AI_PROVIDER=openai`, fallback off
-- [ ] Backup + restore dry-run
+- [ ] Backup + restore dry-run (`scripts/backup-render-postgres.sh` ou Render backups)
 - [ ] Compte pilote créé via `/register` (pas seed)
 - [ ] Landing + pricing publics
-- [ ] Alertes Prometheus / Alertmanager branchées
+- [ ] Pages `API_ORIGIN` → Render ; CORS = domaine public
 - [ ] DPA signé (modèle `docs/security/dpa-template.md`)
 - [ ] 0 P0 ouverts
 - [ ] Hypercare 2 semaines planifié

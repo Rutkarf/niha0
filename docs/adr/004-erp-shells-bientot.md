@@ -1,21 +1,18 @@
-# ADR 004 — ERP module maturity (enterprise update)
+# ADR 004 — ERP data libraries (CMS / PIM / SCM / MRP / ETL / EDI)
 
 ## Status
-Accepted
+Superseded in part — **PIM + CMS/SCM/MRP/ETL/EDI are REAL** as of 0.7.0
 
-## Decision
-| Module | Backend | Frontend | Nav |
-|--------|---------|----------|-----|
-| CRM / Sales / Support | Full CRUD | Full CRUD | Active |
-| RH / Stock / Juridique | Full CRUD | Full CRUD | Active |
-| Accounting / Marketing | Full API + write UI | Active | Active |
-| Audit | API + UI | Active (ADMIN) | Active |
-| Analytics/BI, Stratégie/BPM | thin | thin | **Bientôt** |
-| Administration ERP hub | thin docs | thin | **Bientôt** |
-| CMS, PIM, SCM, MRP, ETL, EDI | — | Shell « Bientôt » | Disabled / library focus only |
+## Context
+Early MVP kept non-core ERP surfaces as agent hubs (“Bientôt”) while CRM/stock/etc. were wired.
 
-## Next vertical (roadmap)
-Priorité produit : **PIM** (référentiel produits) après stabilisation RAG/SSO — un seul shell → réel à la fois.
+## Decision (0.7)
+- Shared table `erp_items` + API `/erp/{module}/items` for CMS, SCM, MRP, ETL, EDI
+- Permission `erp.write` for mutations
+- FE CRUD page `ErpCrudPage` + Gestion / Données nav without `soon`
+- PIM remains dedicated product/variant model
 
-## UX honesty
-Shell pages use `soon-pill` + blocked sidebar clicks (`soon: true` without libraryId).
+## Consequences
+- Shell pages replaced by operational CRUD
+- AI Office libraries marked `available`
+- Further domain depth (BOMs, ASN, mapping UI) can evolve without another shell→REAL rewrite

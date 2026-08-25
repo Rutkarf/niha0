@@ -15,6 +15,11 @@ export const routes: Routes = [
       import('./features/marketing-site/pricing.page').then((m) => m.PricingPage),
   },
   {
+    path: 'use-cases',
+    loadComponent: () =>
+      import('./features/marketing-site/use-cases.page').then((m) => m.UseCasesPage),
+  },
+  {
     path: 'login',
     canActivate: [guestGuard],
     loadComponent: () =>
@@ -152,12 +157,41 @@ export const routes: Routes = [
       {
         path: 'cms',
         canActivate: [onboardingGuard],
-        loadComponent: () => import('./features/cms/cms.page').then((m) => m.CmsPage),
+        data: { erpModule: 'CMS' },
+        loadComponent: () => import('./features/erp/erp-crud.page').then((m) => m.ErpCrudPage),
       },
       {
         path: 'pim',
         canActivate: [onboardingGuard],
         loadComponent: () => import('./features/pim/pim.page').then((m) => m.PimPage),
+      },
+      {
+        path: 'chat',
+        canActivate: [onboardingGuard],
+        loadComponent: () => import('./features/chat/chat.page').then((m) => m.ChatPage),
+      },
+      {
+        path: 'studio',
+        canActivate: [onboardingGuard],
+        loadComponent: () => import('./features/studio/studio.page').then((m) => m.StudioPage),
+      },
+      {
+        path: 'marketplace',
+        canActivate: [onboardingGuard],
+        loadComponent: () =>
+          import('./features/marketplace/marketplace.page').then((m) => m.MarketplacePage),
+      },
+      {
+        path: 'runtime',
+        canActivate: [onboardingGuard],
+        loadComponent: () => import('./features/runtime/runtime.page').then((m) => m.RuntimePage),
+      },
+      {
+        path: 'governance',
+        canActivate: [onboardingGuard, roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('./features/governance/governance.page').then((m) => m.GovernancePage),
       },
       {
         path: 'wms',
@@ -168,12 +202,14 @@ export const routes: Routes = [
       {
         path: 'scm',
         canActivate: [onboardingGuard],
-        loadComponent: () => import('./features/scm/scm.page').then((m) => m.ScmPage),
+        data: { erpModule: 'SCM' },
+        loadComponent: () => import('./features/erp/erp-crud.page').then((m) => m.ErpCrudPage),
       },
       {
         path: 'mrp',
         canActivate: [onboardingGuard],
-        loadComponent: () => import('./features/mrp/mrp.page').then((m) => m.MrpPage),
+        data: { erpModule: 'MRP' },
+        loadComponent: () => import('./features/erp/erp-crud.page').then((m) => m.ErpCrudPage),
       },
       {
         path: 'bi',
@@ -194,12 +230,14 @@ export const routes: Routes = [
       {
         path: 'etl',
         canActivate: [onboardingGuard],
-        loadComponent: () => import('./features/etl/etl.page').then((m) => m.EtlPage),
+        data: { erpModule: 'ETL' },
+        loadComponent: () => import('./features/erp/erp-crud.page').then((m) => m.ErpCrudPage),
       },
       {
         path: 'edi',
         canActivate: [onboardingGuard],
-        loadComponent: () => import('./features/edi/edi.page').then((m) => m.EdiPage),
+        data: { erpModule: 'EDI' },
+        loadComponent: () => import('./features/erp/erp-crud.page').then((m) => m.ErpCrudPage),
       },
       {
         path: 'notifications',

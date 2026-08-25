@@ -23,6 +23,20 @@ import { RouterLink } from '@angular/router';
         </ul>
       </section>
 
+      <section class="card guide">
+        <h2 class="section-title">Formation & agents</h2>
+        <p>
+          Parcours Studio / Marketplace / Chat : voir
+          <code>docs/gtm/onboarding-training.md</code> et
+          <code>docs/gtm/use-cases.md</code>.
+        </p>
+        <ul class="shortcuts">
+          <li><a routerLink="/app/studio">Studio</a> — définir des graphes agents</li>
+          <li><a routerLink="/app/marketplace">Marketplace</a> — publier / installer</li>
+          <li><a routerLink="/app/chat">Chat</a> — conversations avec mémoire</li>
+        </ul>
+      </section>
+
       @for (item of faq; track item.q) {
         <details class="card faq-item">
           <summary>{{ item.q }}</summary>

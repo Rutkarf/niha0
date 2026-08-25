@@ -35,11 +35,11 @@ export interface RoomCameraFraming {
 
 /**
  * World-space bounds of the office floor + walls (source of truth for empty scene).
- * Matches office-builder floor (30×18) and wall placements (±15 x, ±9 z, h≈4.2).
+ * Matches office-builder floor (~34×23) and wall placements.
  */
 export const ROOM_STATIC_BOUNDS = new THREE.Box3(
-  new THREE.Vector3(-15.2, 0, -9.2),
-  new THREE.Vector3(15.2, 4.4, 9.2),
+  new THREE.Vector3(-16.2, 0, -11.2),
+  new THREE.Vector3(18.2, 5.8, 12.2),
 );
 
 /**

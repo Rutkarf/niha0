@@ -6,13 +6,21 @@ import {
   Agent,
   AgentAction,
   AgentApproval,
+  AgentDefinition,
+  AgentMemory,
+  AgentRuntimeRun,
+  AgentRuntimeStep,
   AuditLog,
   AcceptInvitePayload,
   BillingCheckoutResponse,
   BillingCheckoutStatus,
   BillingPlan,
   BillingPlanTier,
+  BiReport,
   Campaign,
+  ChatMessage,
+  ChatPostMessageResponse,
+  ChatThread,
   Contract,
   CreateCampaignPayload,
   CreateInvitePayload,
@@ -24,10 +32,14 @@ import {
   DashboardKpis,
   Document,
   Employee,
+  ErpItem,
+  GuardrailEvent,
   Invoice,
   Lead,
   LeaveRequest,
   MarketingPost,
+  MarketplaceInstall,
+  MarketplaceListing,
   MembershipMember,
   MfaEnrollment,
   NotificationItem,
@@ -35,11 +47,15 @@ import {
   Organization,
   OrganizationInvite,
   Payment,
+  Permission,
+  PimProduct,
+  PimVariant,
   PrivacyExport,
   ResetPasswordPayload,
   StockItem,
   SubmitFeedbackPayload,
   Ticket,
+  ToolSandboxLog,
   UpdateMemberPayload,
   WebhookEndpoint,
 } from './api.models';
@@ -562,5 +578,180 @@ export class ApiService {
 
   convertQuoteToInvoice(quoteId: string): Observable<Invoice> {
     return this.http.post<Invoice>(`${this.base}/accounting/quotes/${quoteId}/convert-to-invoice`, {});
+  }
+
+  // ——— PIM ———
+  getPimProducts(): Observable<PimProduct[]> {
+    return this.http.get<PimProduct[]>(`${this.base}/pim/products`);
+  }
+
+  createPimProduct(body: Partial<PimProduct>): Observable<PimProduct> {
+    return this.http.post<PimProduct>(`${this.base}/pim/products`, body);
+  }
+
+  updatePimProduct(id: string, body: Partial<PimProduct>): Observable<PimProduct> {
+    return this.http.put<PimProduct>(`${this.base}/pim/products/${id}`, body);
+  }
+
+  deletePimProduct(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/pim/products/${id}`);
+  }
+
+  getPimVariants(productId: string): Observable<PimVariant[]> {
+    return this.http.get<PimVariant[]>(`${this.base}/pim/products/${productId}/variants`);
+  }
+
+  createPimVariant(productId: string, body: Partial<PimVariant>): Observable<PimVariant> {
+    return this.http.post<PimVariant>(`${this.base}/pim/products/${productId}/variants`, body);
+  }
+
+  // ——— ERP modules (CMS/SCM/MRP/ETL/EDI) ———
+  listErpItems(module: string): Observable<ErpItem[]> {
+    return this.http.get<ErpItem[]>(`${this.base}/erp/${module.toLowerCase()}/items`);
+  }
+
+  createErpItem(module: string, body: Partial<ErpItem>): Observable<ErpItem> {
+    return this.http.post<ErpItem>(`${this.base}/erp/${module.toLowerCase()}/items`, body);
+  }
+
+  updateErpItem(module: string, id: string, body: Partial<ErpItem>): Observable<ErpItem> {
+    return this.http.put<ErpItem>(`${this.base}/erp/${module.toLowerCase()}/items/${id}`, body);
+  }
+
+  deleteErpItem(module: string, id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/erp/${module.toLowerCase()}/items/${id}`);
+  }
+
+  // ——— Chat ———
+  getChatThreads(): Observable<ChatThread[]> {
+    return this.http.get<ChatThread[]>(`${this.base}/chat/threads`);
+  }
+
+  createChatThread(body?: { title?: string; agentId?: string }): Observable<ChatThread> {
+    return this.http.post<ChatThread>(`${this.base}/chat/threads`, body ?? {});
+  }
+
+  getChatMessages(threadId: string): Observable<ChatMessage[]> {
+    return this.http.get<ChatMessage[]>(`${this.base}/chat/threads/${threadId}/messages`);
+  }
+
+  postChatMessage(threadId: string, content: string): Observable<ChatPostMessageResponse> {
+    return this.http.post<ChatPostMessageResponse>(`${this.base}/chat/threads/${threadId}/messages`, {
+      content,
+    });
+  }
+
+  // ——— Agent runtime ———
+  startAgentRuntime(body?: {
+    agentId?: string;
+    graphName?: string;
+  }): Observable<AgentRuntimeRun> {
+    return this.http.post<AgentRuntimeRun>(`${this.base}/agents/runtime/start`, body ?? {});
+  }
+
+  listAgentRuntimeRuns(): Observable<AgentRuntimeRun[]> {
+    return this.http.get<AgentRuntimeRun[]>(`${this.base}/agents/runtime`);
+  }
+
+  getAgentRuntimeRun(id: string): Observable<AgentRuntimeRun> {
+    return this.http.get<AgentRuntimeRun>(`${this.base}/agents/runtime/${id}`);
+  }
+
+  resumeAgentRuntime(id: string, decision = 'APPROVED'): Observable<AgentRuntimeRun> {
+    return this.http.post<AgentRuntimeRun>(`${this.base}/agents/runtime/${id}/resume`, { decision });
+  }
+
+  getAgentRuntimeSteps(id: string): Observable<AgentRuntimeStep[]> {
+    return this.http.get<AgentRuntimeStep[]>(`${this.base}/agents/runtime/${id}/steps`);
+  }
+
+  // ——— Memory ———
+  getMemories(scope?: string): Observable<AgentMemory[]> {
+    let params = new HttpParams();
+    if (scope) params = params.set('scope', scope);
+    return this.http.get<AgentMemory[]>(`${this.base}/memory`, { params });
+  }
+
+  putMemory(body: Partial<AgentMemory>): Observable<AgentMemory> {
+    return this.http.post<AgentMemory>(`${this.base}/memory`, body);
+  }
+
+  deleteMemory(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/memory/${id}`);
+  }
+
+  // ——— Governance ———
+  getGovernancePermissionsMe(): Observable<Permission[]> {
+    return this.http.get<Permission[]>(`${this.base}/governance/permissions/me`);
+  }
+
+  getGuardrailEvents(): Observable<GuardrailEvent[]> {
+    return this.http.get<GuardrailEvent[]>(`${this.base}/governance/guardrails`);
+  }
+
+  getSandboxLogs(): Observable<ToolSandboxLog[]> {
+    return this.http.get<ToolSandboxLog[]>(`${this.base}/governance/sandbox`);
+  }
+
+  getEvalDashboard(): Observable<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(`${this.base}/governance/eval`);
+  }
+
+  scanGuardrail(text: string): Observable<{ blocked: boolean; reason: string; eventId: string }> {
+    return this.http.post<{ blocked: boolean; reason: string; eventId: string }>(
+      `${this.base}/governance/guardrails/scan`,
+      { text },
+    );
+  }
+
+  // ——— Studio / Marketplace ———
+  getStudioDefinitions(): Observable<AgentDefinition[]> {
+    return this.http.get<AgentDefinition[]>(`${this.base}/studio/definitions`);
+  }
+
+  createStudioDefinition(body: Partial<AgentDefinition>): Observable<AgentDefinition> {
+    return this.http.post<AgentDefinition>(`${this.base}/studio/definitions`, body);
+  }
+
+  updateStudioDefinition(id: string, body: Partial<AgentDefinition>): Observable<AgentDefinition> {
+    return this.http.put<AgentDefinition>(`${this.base}/studio/definitions/${id}`, body);
+  }
+
+  getStudioDefinition(id: string): Observable<AgentDefinition> {
+    return this.http.get<AgentDefinition>(`${this.base}/studio/definitions/${id}`);
+  }
+
+  getMarketplaceListings(visibility?: string): Observable<MarketplaceListing[]> {
+    let params = new HttpParams();
+    if (visibility) params = params.set('visibility', visibility);
+    return this.http.get<MarketplaceListing[]>(`${this.base}/marketplace/listings`, { params });
+  }
+
+  publishMarketplaceListing(body: {
+    definitionId: string;
+    title?: string;
+    summary?: string;
+    visibility?: string;
+  }): Observable<MarketplaceListing> {
+    return this.http.post<MarketplaceListing>(`${this.base}/marketplace/listings`, body);
+  }
+
+  getMarketplaceInstalls(): Observable<MarketplaceInstall[]> {
+    return this.http.get<MarketplaceInstall[]>(`${this.base}/marketplace/installs`);
+  }
+
+  installMarketplaceListing(
+    listingId: string,
+    configJson?: string,
+  ): Observable<MarketplaceInstall> {
+    return this.http.post<MarketplaceInstall>(`${this.base}/marketplace/installs`, {
+      listingId,
+      configJson,
+    });
+  }
+
+  // ——— BI ———
+  getBiReport(): Observable<BiReport> {
+    return this.http.get<BiReport>(`${this.base}/bi/report`);
   }
 }

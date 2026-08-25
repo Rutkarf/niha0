@@ -4,6 +4,7 @@ import com.sasurd.niha0.identity.OAuth2LoginSuccessHandler;
 import com.sasurd.niha0.identity.OAuth2StatusService;
 import com.sasurd.niha0.security.AuthRateLimitFilter;
 import com.sasurd.niha0.security.JwtAuthFilter;
+import com.sasurd.niha0.security.OsApiRateLimitFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.ObjectProvider;
@@ -33,24 +34,30 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
+    private final OsApiRateLimitFilter osApiRateLimitFilter;
     private final Environment environment;
     private final OAuth2StatusService oauth2StatusService;
     private final ObjectProvider<OAuth2LoginSuccessHandler> oauth2LoginSuccessHandler;
     private final boolean csrfEnabled;
+    private final boolean accessCookieEnabled;
 
     public SecurityConfig(
             JwtAuthFilter jwtAuthFilter,
             AuthRateLimitFilter authRateLimitFilter,
+            OsApiRateLimitFilter osApiRateLimitFilter,
             Environment environment,
             OAuth2StatusService oauth2StatusService,
             ObjectProvider<OAuth2LoginSuccessHandler> oauth2LoginSuccessHandler,
-            @Value("${niha0.security.csrf-enabled:false}") boolean csrfEnabled) {
+            @Value("${niha0.security.csrf-enabled:false}") boolean csrfEnabled,
+            @Value("${niha0.security.access-cookie-enabled:false}") boolean accessCookieEnabled) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.authRateLimitFilter = authRateLimitFilter;
+        this.osApiRateLimitFilter = osApiRateLimitFilter;
         this.environment = environment;
         this.oauth2StatusService = oauth2StatusService;
         this.oauth2LoginSuccessHandler = oauth2LoginSuccessHandler;
         this.csrfEnabled = csrfEnabled;
+        this.accessCookieEnabled = accessCookieEnabled;
     }
 
     @Bean
@@ -93,6 +100,7 @@ public class SecurityConfig {
                     auth.anyRequest().authenticated();
                 })
                 .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(osApiRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         if (oauth2LoginActive) {
@@ -141,6 +149,10 @@ public class SecurityConfig {
                 return true;
             }
             String authz = request.getHeader("Authorization");
+            // When access cookie mode is on, CSRF applies even if a legacy Bearer is present.
+            if (accessCookieEnabled) {
+                return false;
+            }
             return authz != null && authz.regionMatches(true, 0, "Bearer ", 0, 7);
         };
     }

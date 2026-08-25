@@ -11,6 +11,7 @@ export interface ScenePalette {
   plant: string;
   neon: string;
   glass: string;
+  gold: string;
   text: string;
   digital: string;
   magenta: string;

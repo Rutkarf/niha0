@@ -17,9 +17,9 @@ Une stack déployable hors laptop, avec defaults qui refusent la démo.
 | 5 | `MAIL_MODE=smtp` + templates HTML FR | `mail/*.html` + `SmtpMailService` |
 | 6 | Storage ≠ local | MinIO/S3 required by validator |
 | 7 | SumUp keys (sandbox staging) | `.env.prod.example` + compose passthrough |
-| 8 | CD push images | `cd-staging.yml` / `cd-prod.yml` → GHCR |
-| 9 | Deploy | Secrets `STAGING_*` ou `FLY_API_TOKEN` / `PROD_DEPLOY_HOST` |
-| 10 | Backup + restore dry-run | `make backup` · `make restore-dry DUMP=…` |
+| 8 | CD push images | `cd-staging.yml` / `cd-prod.yml` → GHCR ; `cd-cloudflare-render.yml` |
+| 9 | Deploy | **Cloudflare Pages + Render** (`docs/ops/cloudflare-render.md`) ou Fly/SSH |
+| 10 | Backup + restore dry-run | `make backup` · `scripts/backup-render-postgres.sh` · `make restore-dry DUMP=…` |
 
 ## Commandes locales
 
@@ -29,7 +29,11 @@ make backup           # nécessite Postgres up
 make restore-dry DUMP=backups/postgres/niha0-….dump
 ```
 
-## Déploiement Fly.io
+## Déploiement Cloudflare + Render (recommandé)
+
+Voir [`cloudflare-render.md`](./cloudflare-render.md) — Blueprint `render.yaml`, Pages Function `/api`, R2, CD `cd-cloudflare-render.yml`.
+
+## Déploiement Fly.io (alternatif)
 
 ```bash
 fly apps create niha0-api

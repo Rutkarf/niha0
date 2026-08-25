@@ -41,7 +41,7 @@ export function setEmissiveBoost(
   });
 }
 
-export type SceneTooltipKind = 'agent' | 'library' | 'ceo' | 'bell' | null;
+export type SceneTooltipKind = 'agent' | 'library' | 'ceo' | 'bell' | 'scenic' | 'centralizer' | 'totem' | null;
 
 export interface SceneTooltipPayload {
   kind: SceneTooltipKind;

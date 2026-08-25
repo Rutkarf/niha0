@@ -1,0 +1,106 @@
+name: CD Cloudflare + Render
+
+# Deploys SPA → Cloudflare Pages and triggers Render deploy hook for the API.
+# Secrets (environment "production"):
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_PAGES_PROJECT
+#   RENDER_DEPLOY_HOOK_URL (service deploy hook)
+# Optional: API_ORIGIN (passed as Pages env via wrangler — set also in CF dashboard)
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_render:
+        description: "Skip Render deploy hook"
+        type: boolean
+        default: false
+      skip_pages:
+        description: "Skip Cloudflare Pages deploy"
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: cd-cloudflare-render
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: CI gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/niha0-frontend/package-lock.json
+      - name: Backend tests
+        working-directory: apps/niha0-backend
+        run: ./mvnw -B test
+      - name: Frontend lint, test, build
+        working-directory: apps/niha0-frontend
+        run: |
+          npm ci
+          npm run lint
+          npm run test -- --watch=false
+          npm run build
+
+  deploy-pages:
+    name: Deploy Cloudflare Pages
+    needs: gate
+    if: ${{ github.event_name == 'push' || inputs.skip_pages != true }}
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: apps/niha0-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/niha0-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Deploy to Cloudflare Pages
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          PROJECT="${{ secrets.CLOUDFLARE_PAGES_PROJECT }}"
+          PROJECT="${PROJECT:-niha0}"
+          npx wrangler pages deploy dist/niha0-frontend/browser \
+            --project-name="$PROJECT" \
+            --commit-dirty=true
+      - name: Pages secrets missing
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN == '' || secrets.CLOUDFLARE_ACCOUNT_ID == '' }}
+        run: |
+          echo "::warning::Set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID (+ CLOUDFLARE_PAGES_PROJECT) to deploy Pages."
+
+  deploy-render:
+    name: Trigger Render deploy
+    needs: gate
+    if: ${{ github.event_name == 'push' || inputs.skip_render != true }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Call Render deploy hook
+        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl -fsS -X POST "$HOOK"
+          echo "Render deploy hook invoked"
+      - name: Render hook missing
+        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL == '' }}
+        run: |
+          echo "::warning::Set RENDER_DEPLOY_HOOK_URL (Render → Service → Deploy Hook) to auto-deploy the API."
+          echo "Blueprint: render.yaml — docs/ops/cloudflare-render.md"

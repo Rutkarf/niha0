@@ -34,15 +34,18 @@ public class DocumentIndexingService {
     private final CompanyDataAssetRepository dataAssetRepository;
     private final ObjectStorageService objectStorage;
     private final EmbeddingProvider embeddingProvider;
+    private final PgVectorWriter pgVectorWriter;
 
     public DocumentIndexingService(DocumentChunkRepository chunkRepository,
                                    CompanyDataAssetRepository dataAssetRepository,
                                    ObjectStorageService objectStorage,
-                                   EmbeddingProvider embeddingProvider) {
+                                   EmbeddingProvider embeddingProvider,
+                                   PgVectorWriter pgVectorWriter) {
         this.chunkRepository = chunkRepository;
         this.dataAssetRepository = dataAssetRepository;
         this.objectStorage = objectStorage;
         this.embeddingProvider = embeddingProvider;
+        this.pgVectorWriter = pgVectorWriter;
     }
 
     @Transactional
@@ -75,8 +78,10 @@ public class DocumentIndexingService {
             chunk.setChunkIndex(i++);
             chunk.setContent(part);
             chunk.setTokenEstimate(Math.max(1, part.length() / 4));
-            chunk.setEmbeddingJson(EmbeddingJson.toJson(embeddingProvider.embed(part)));
-            chunkRepository.save(chunk);
+            float[] vector = embeddingProvider.embed(part);
+            chunk.setEmbeddingJson(EmbeddingJson.toJson(vector));
+            chunk = chunkRepository.save(chunk);
+            pgVectorWriter.upsert(chunk.getId(), vector);
         }
 
         asset.setProcessingStatus(parts.isEmpty() ? "UPLOADED" : "INDEXED");

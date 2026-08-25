@@ -10,6 +10,7 @@ import { LocaleService } from '../../core/i18n/locale.service';
       <header class="top">
         <a routerLink="/" class="brand">NIHAO</a>
         <nav>
+          <a routerLink="/use-cases">Cas d’usage</a>
           <a routerLink="/pricing">{{ locale.t('pricing') }}</a>
           <a routerLink="/login" class="btn btn-ghost">{{ locale.t('signInCta') }}</a>
           <a routerLink="/register" class="btn btn-primary">{{ locale.t('getStarted') }}</a>
@@ -38,11 +39,9 @@ import { LocaleService } from '../../core/i18n/locale.service';
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      padding: 1.5rem clamp(1rem, 4vw, 3rem) 2rem;
-      background:
-        radial-gradient(ellipse 80% 50% at 10% 0%, color-mix(in oklab, var(--accent-primary) 18%, transparent), transparent),
-        linear-gradient(165deg, color-mix(in oklab, var(--bg-app, #f4f6f5) 92%, #c8ddd4), var(--bg-app, #f4f6f5));
-      color: var(--text-primary, #14201c);
+      padding: 1.5rem clamp(1rem, 4vw, 3rem) 5.5rem;
+      background: var(--gradient-page);
+      color: var(--text-primary);
       font-family: var(--font-body, system-ui, sans-serif);
     }
     .top {
@@ -58,7 +57,7 @@ import { LocaleService } from '../../core/i18n/locale.service';
       font-weight: 800;
       font-size: 1.4rem;
       text-decoration: none;
-      color: inherit;
+      color: var(--text-primary);
       letter-spacing: 0.04em;
     }
     nav {
@@ -68,9 +67,14 @@ import { LocaleService } from '../../core/i18n/locale.service';
       flex-wrap: wrap;
     }
     nav a:not(.btn) {
-      color: inherit;
+      color: var(--text-primary);
       text-decoration: none;
-      opacity: 0.8;
+      opacity: 0.9;
+    }
+    .btn-ghost {
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+      background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
     }
     .hero {
       max-width: 40rem;
@@ -81,7 +85,7 @@ import { LocaleService } from '../../core/i18n/locale.service';
       text-transform: uppercase;
       letter-spacing: 0.12em;
       font-size: 0.75rem;
-      opacity: 0.65;
+      color: var(--text-secondary);
     }
     h1 {
       font-family: var(--font-display, Georgia, serif);
@@ -92,7 +96,7 @@ import { LocaleService } from '../../core/i18n/locale.service';
     .lead {
       font-size: 1.1rem;
       line-height: 1.55;
-      opacity: 0.85;
+      color: var(--text-secondary);
       margin-bottom: 1.75rem;
     }
     .cta {
@@ -108,19 +112,19 @@ import { LocaleService } from '../../core/i18n/locale.service';
       gap: 1.25rem;
       margin-top: 3rem;
       font-size: 0.9rem;
-      opacity: 0.7;
       animation: rise 0.6s 0.16s ease-out both;
     }
     .foot a {
-      color: inherit;
+      color: var(--text-secondary);
+    }
+    .foot a:hover {
+      color: var(--text-primary);
     }
     @keyframes rise {
       from {
-        opacity: 0;
         transform: translateY(10px);
       }
       to {
-        opacity: 1;
         transform: none;
       }
     }

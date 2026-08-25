@@ -1,23 +1,21 @@
-# ADR 008 — CSRF preparation for cookie-based sessions
+# ADR 008 — CSRF + access token cookie
 
 ## Status
-Accepted (prep) — default **off**
+Accepted — **enabled in prod** (`CSRF_ENABLED=true`, `ACCESS_COOKIE_ENABLED=true`)
 
 ## Context
-Access tokens are Bearer (memory). Refresh is HttpOnly cookie (`Path=/api/auth`). CSRF is low risk for Bearer mutations but required if access tokens move to cookies.
+Refresh was already HttpOnly (`niha0_refresh`). Access lived in SPA memory as Bearer, which bypassed CSRF.
 
 ## Decision
-- Property `niha0.security.csrf-enabled` / `CSRF_ENABLED` (default `false`)
-- When `true`:
-  - `CookieCsrfTokenRepository` (non-HttpOnly `XSRF-TOKEN`)
-  - Client sends `X-XSRF-TOKEN`
-  - Ignored for: auth bootstrap, SumUp webhooks, requests with `Authorization: Bearer …`
-- Spring security headers always: `X-Content-Type-Options`, `X-Frame-Options: DENY`, HSTS in `prod`
+1. `niha0_access` HttpOnly cookie, `Path=/api`, SameSite configurable
+2. `JwtAuthFilter` accepts Bearer **or** access cookie
+3. When `access-cookie-enabled=true`, CSRF **no longer ignores** Bearer (SPA should omit Bearer)
+4. FE `environment.accessCookieAuth` (prod `true`) skips `Authorization` header; sends `X-XSRF-TOKEN`
+5. Local/dev keeps Bearer for simpler tooling (`accessCookieAuth: false`)
 
-## Migration path
-1. Keep Bearer (current)
-2. Enable `CSRF_ENABLED=true` in staging — FE interceptor already can attach XSRF from cookie
-3. Move access token to Secure cookie → remove Bearer ignore matcher → full CSRF
-
-## JWT rotation
-`JWT_PREVIOUS_SECRET` verifies tokens signed with the previous key during rotation windows.
+## Cookies
+| Name | Path | Purpose |
+|------|------|---------|
+| `niha0_refresh` | `/api/auth` | Refresh rotation |
+| `niha0_access` | `/api` | Access JWT |
+| `XSRF-TOKEN` | `/` | Double-submit CSRF (readable by JS) |

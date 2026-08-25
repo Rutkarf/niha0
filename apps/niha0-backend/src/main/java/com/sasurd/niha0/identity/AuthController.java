@@ -48,14 +48,14 @@ public class AuthController {
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
         TokenResponse tokens = authService.login(request);
-        authCookieWriter.setRefreshCookieIfPresent(response, tokens);
+        authCookieWriter.setSessionCookiesIfPresent(response, tokens);
         return tokens;
     }
 
     @PostMapping("/register")
     public TokenResponse register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
         TokenResponse tokens = authService.register(request);
-        authCookieWriter.setRefreshCookieIfPresent(response, tokens);
+        authCookieWriter.setSessionCookiesIfPresent(response, tokens);
         return tokens;
     }
 
@@ -64,21 +64,21 @@ public class AuthController {
                                  @CookieValue(name = AuthCookieWriter.REFRESH_COOKIE, required = false) String cookieRefresh,
                                  HttpServletResponse response) {
         TokenResponse tokens = authService.refresh(request, cookieRefresh);
-        authCookieWriter.setRefreshCookieIfPresent(response, tokens);
+        authCookieWriter.setSessionCookiesIfPresent(response, tokens);
         return tokens;
     }
 
     @PostMapping("/logout")
     public MessageResponse logout(HttpServletResponse response) {
         authService.logout();
-        authCookieWriter.clearRefreshCookie(response);
+        authCookieWriter.clearSessionCookies(response);
         return new MessageResponse("Logged out.");
     }
 
     @PostMapping("/mfa/verify")
     public TokenResponse verifyMfa(@Valid @RequestBody MfaVerifyRequest request, HttpServletResponse response) {
         TokenResponse tokens = authService.verifyMfa(request);
-        authCookieWriter.setRefreshCookieIfPresent(response, tokens);
+        authCookieWriter.setSessionCookiesIfPresent(response, tokens);
         return tokens;
     }
 
@@ -96,7 +96,7 @@ public class AuthController {
     public TokenResponse exchangeSso(@Valid @RequestBody SsoExchangeRequest request,
                                      HttpServletResponse response) {
         TokenResponse tokens = ssoCodeService.exchangeCode(request.code());
-        authCookieWriter.setRefreshCookieIfPresent(response, tokens);
+        authCookieWriter.setSessionCookiesIfPresent(response, tokens);
         return tokens;
     }
 
@@ -114,7 +114,7 @@ public class AuthController {
     public TokenResponse acceptInvite(@Valid @RequestBody AcceptInviteRequest request,
                                       HttpServletResponse response) {
         TokenResponse tokens = authService.acceptInvite(request);
-        authCookieWriter.setRefreshCookieIfPresent(response, tokens);
+        authCookieWriter.setSessionCookiesIfPresent(response, tokens);
         return tokens;
     }
 

@@ -41,5 +41,7 @@ Docs : [SumUp billing](../ops/sumup-billing.md) · [ADR 006 cookies](../adr/006-
 
 ## Verdict
 
-- [ ] **Prêt pilote commercial**
+- [x] **Code prêt pilote commercial** (v0.6.1) — cocher P0 ops sur staging Cloudflare/Render
 - Date / validateur : __________
+
+Deploy : [`../ops/cloudflare-render.md`](../ops/cloudflare-render.md)

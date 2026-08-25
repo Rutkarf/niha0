@@ -17,7 +17,7 @@
          │                         ┌────────────┼────────────┐
          │                         ▼            ▼            ▼
          │                   PostgreSQL 17   Object store   (opt) OpenAI
-         │                   Flyway V1–V10   local|minio|s3  AI_PROVIDER
+         │                   Flyway V1–V16   local|minio|s3  AI_PROVIDER
          ▼
    Browser :4200  →  API :8080/api
 ```
@@ -70,9 +70,12 @@ src/app/
 | `/app/onboarding`, `/workspace`, `/company-data`, `/settings` | **REAL** |
 | `/app/ai-office` | **REAL** (scène 3D + approvals) ; moteur IA peut être **MOCK** |
 | `/app/ai-center` | **REAL** API + libellé démo si mock |
-| `/app/crm`, `/sales`, `/legal`, `/hcm`, `/wms` | **REAL** CRUD (HCM partiel) |
-| `/app/dashboard`, `/accounting`, `/customer-relations`, `/marketing`, `/administration`, `/notifications`, `/audit`, `/bi`, `/bpm` | **REAL (RO)** ou thin |
-| `/app/cms`, `/pim`, `/scm`, `/mrp`, `/etl`, `/edi` | **SHELL** |
+| `/app/crm`, `/sales`, `/legal`, `/hcm`, `/wms`, `/pim` | **REAL** CRUD (HCM partiel) |
+| `/app/chat`, `/runtime`, `/studio`, `/marketplace` | **REAL** (NIHAO_05) |
+| `/app/governance` | **REAL** (ADMIN ; OWNER via roleGuard) |
+| `/app/dashboard`, `/accounting`, `/customer-relations`, `/marketing`, `/administration`, `/notifications`, `/audit`, `/bi`, `/bpm` | **REAL** BI rapport ; autres RO/thin |
+| `/app/cms`, `/scm`, `/mrp`, `/etl`, `/edi` | **REAL** CRUD (`/erp/{module}/items`) |
+| `/app/pim` | **REAL** CRUD produits/variantes |
 | `module-placeholder/` | Orphelin (non routé) |
 
 ### Services cœur (signals, pas NgRx)
@@ -159,7 +162,7 @@ Tables métier : agents, CRM, accounting, tickets, marketing, documents, contrac
 
 ---
 
-## 6. Flyway V1–V10
+## 6. Flyway V1–V16
 
 | Version | Contenu |
 |---------|---------|
@@ -173,6 +176,12 @@ Tables métier : agents, CRM, accounting, tickets, marketing, documents, contrac
 | V8 | `document_chunks` RAG |
 | V9 | HR / stock + enrichissement legal |
 | V10 | Reset MDP, invites, feedback, privacy, webhooks, billing_plan, MFA stub, locale |
+| V11 | Commercial (SumUp / billing finish) |
+| V12 | RAG vectors |
+| V13 | OAuth identities |
+| V14 | Deactivate demo users |
+| V15 | Row-level security |
+| V16 | NIHAO_05 OS layers — PIM, chat, runtime, memory, governance, studio/marketplace, BI |
 
 Miroir tests : `src/test/resources/db/test-migration/`.
 
@@ -207,8 +216,9 @@ Miroir tests : `src/test/resources/db/test-migration/`.
 | Legal / HR / Stock | REAL CRUD | REAL (HCM partiel) | Active | OK |
 | Company data + RAG keyword | REAL | REAL | Active | Partiel (pas embeddings) |
 | Accounting / Tickets / Marketing | REAL API | **CRUD** UI (tickets/accounting/marketing write) | Mixte | OK 0.2 |
-| Dashboard / BI / Notifications / Audit | REAL | RO | BI/Audit `soon` | Partial |
-| CMS, PIM, SCM, MRP, ETL, EDI | — / thin | **SHELL** | Bientôt | Shell |
+| Dashboard / BI / Notifications / Audit | REAL | REAL BI + RO elsewhere | Audit ADMIN | OK 05 |
+| CMS, SCM, MRP, ETL, EDI | REAL API | **REAL** CRUD | Active | OK 0.7 |
+| PIM | REAL CRUD | **REAL** | Active | OK 05 |
 | SSE multi-instance | in-memory | REAL client | — | Single-JVM |
 | Object storage prod | S3/MinIO | Upload UI | — | OK si `STORAGE_MODE` |
 
@@ -222,7 +232,7 @@ Miroir tests : `src/test/resources/db/test-migration/`.
 4. **SSE** — ticket OK ; broadcaster JVM-local (→ Phase 19).
 5. **ERP shells** — navigation « Bientôt » vs routes encore atteignables (→ Phase 17).
 6. **3D** — dispose / pathfinding / porte (→ Phases 13–15).
-7. **Tenancy** — application-level only (pas RLS) ; tests `TenancyIsolationTest` (→ Phase 8/24).
+7. **Tenancy** — application-level + RLS V15/V17 ; permissions JWT `hasAuthority` (0.6.2).
 8. **Docs audit** — `docs/audit/project-audit.md` **obsolète** (Nova Atelier, SSE cassé, etc.) ; cette carte prime.
 
 ---

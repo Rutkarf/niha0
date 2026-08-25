@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpMethod;
 import org.springframework.lang.NonNull;
@@ -42,13 +43,20 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private final ConcurrentHashMap<String, Deque<Long>> attempts = new ConcurrentHashMap<>();
     private final ObjectProvider<StringRedisTemplate> redisTemplate;
+    private final boolean enabled;
 
-    public AuthRateLimitFilter(ObjectProvider<StringRedisTemplate> redisTemplate) {
+    public AuthRateLimitFilter(
+            ObjectProvider<StringRedisTemplate> redisTemplate,
+            @Value("${niha0.security.auth-rate-limit-enabled:true}") boolean enabled) {
         this.redisTemplate = redisTemplate;
+        this.enabled = enabled;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (!enabled) {
+            return true;
+        }
         if (!HttpMethod.POST.matches(request.getMethod())) {
             return true;
         }

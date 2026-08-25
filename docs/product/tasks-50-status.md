@@ -56,12 +56,14 @@
 | 49 | Feedback utilisateur | **DONE** | `/feedback` API + page |
 | 50 | Checklist produit fini | **DONE** | `docs/product/finished-checklist.md` |
 
-## Limites assumées 0.2.0 (pas bloquantes doc)
+## Limites assumées 0.6.x (pas bloquantes pour pilote)
 
-1. Tokens encore en `localStorage` (migration cookies httpOnly planifiée — risque XSS documenté).
-2. MFA = stub confirmation 6 chiffres (pas TOTP RFC réel).
-3. Billing = plans locaux sans Stripe Checkout.
-4. Webhooks = stockage config sans worker de livraison.
-5. SSE toujours in-memory (Redis pub/sub non branché).
-6. RAG = keyword, pas pgvector.
-7. CD staging = template à câbler sur un registry/host réel.
+1. Access token en mémoire ; refresh httpOnly cookie (path `/api/auth`) — legacy localStorage migré.
+2. MFA TOTP réel (0.3+) ; recovery codes.
+3. Billing SumUp Hosted Checkout (stub local documenté).
+4. Webhooks sortants : worker de livraison présent (0.3+).
+5. SSE Redis opt-in (`REALTIME_MODE=redis`) — défaut memory en local.
+6. RAG hybrid hash|openai ; pgvector = post-pilote.
+7. CD : Cloudflare Pages + Render (`cd-cloudflare-render.yml`) — secrets host requis.
+8. Shells ERP : CMS / SCM / MRP / ETL / EDI.
+9. Studio : éditeur JSON (pas drag-and-drop).

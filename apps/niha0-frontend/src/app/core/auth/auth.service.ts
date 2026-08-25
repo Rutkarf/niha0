@@ -92,13 +92,14 @@ export class AuthService {
   }
 
   async loadMe(): Promise<UserMe | null> {
-    const token = this.accessTokenSignal();
-    if (!token) {
+    if (!environment.accessCookieAuth && !this.accessTokenSignal()) {
       this.userSignal.set(null);
       return null;
     }
     try {
-      const me = await firstValueFrom(this.http.get<UserMe>(`${this.baseUrl}/auth/me`));
+      const me = await firstValueFrom(
+        this.http.get<UserMe>(`${this.baseUrl}/auth/me`, { withCredentials: true }),
+      );
       this.userSignal.set(me);
       return me;
     } catch {
@@ -169,11 +170,12 @@ export class AuthService {
 
   private persistTokens(tokens: TokenResponse): void {
     if (tokens.accessToken) {
+      // Keep in-memory copy for Bearer fallback / tests; cookie mode still sets HttpOnly access cookie server-side.
       this.accessTokenSignal.set(tokens.accessToken);
       localStorage.removeItem(LEGACY_ACCESS_KEY);
     }
     if (tokens.refreshToken) {
-      this.refreshTokenMemory = tokens.refreshToken;
+      this.refreshTokenMemory = environment.accessCookieAuth ? null : tokens.refreshToken;
     }
   }
 

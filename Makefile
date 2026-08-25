@@ -1,4 +1,4 @@
-.PHONY: help dev prod up down build test lint check backend-test frontend-test frontend-build backend-build backend-run frontend-run backup restore-dry compose-config smoke-health
+.PHONY: help dev prod up down build test lint check backend-test frontend-test frontend-build backend-build backend-run frontend-run backup backup-render restore-dry compose-config smoke-health
 
 help:
 	@echo "NIHAO — commandes disponibles"
@@ -9,12 +9,13 @@ help:
 	@echo "  make lint           Typecheck frontend (tsc --noEmit)"
 	@echo "  make test           Tests frontend + backend"
 	@echo "  make check          lint + test + build"
-	@echo "  make backup         Dump Postgres (scripts/backup-postgres.sh)"
-	@echo "  make restore-dry    Dry-run restore (DUMP=path.dump)"
-	@echo "  make compose-config Valider docker-compose.yml avec secrets CI"
-	@echo "  make smoke-health   GET /api/actuator/health"
-	@echo "  make backend-run    Lancer le backend (PostgreSQL requis)"
-	@echo "  make frontend-run   Lancer le frontend (ng serve)"
+  @echo "  make backup         Dump Postgres (scripts/backup-postgres.sh)"
+  @echo "  make backup-render  Dump via DATABASE_URL (Render)"
+  @echo "  make restore-dry    Dry-run restore (DUMP=path.dump)"
+  @echo "  make compose-config Valider docker-compose.yml avec secrets CI"
+  @echo "  make smoke-health   GET /api/actuator/health"
+  @echo "  make backend-run    Lancer le backend (PostgreSQL requis)"
+  @echo "  make frontend-run   Lancer le frontend (ng serve)"
 
 # Prefer docker compose; fall back to podman compose when Docker CLI is unavailable.
 COMPOSE ?= $(shell command -v docker >/dev/null 2>&1 && echo docker || echo podman)
@@ -58,6 +59,9 @@ frontend-run:
 
 backup:
 	./scripts/backup-postgres.sh
+
+backup-render:
+	./scripts/backup-render-postgres.sh
 
 restore-dry:
 	@test -n "$(DUMP)" || (echo "Usage: make restore-dry DUMP=backups/postgres/niha0-….dump" >&2; exit 1)

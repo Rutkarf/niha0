@@ -18,7 +18,7 @@ Centre de contrôle : **AI Office** (agents IA + CEO).
 make dev
 # équivalent : docker compose -f docker-compose.dev.yml up -d postgres
 
-# 2. Backend (Flyway V1–V10 au démarrage)
+# 2. Backend (Flyway V1–V17 au démarrage)
 cd apps/niha0-backend && ./mvnw spring-boot:run
 # ou : make backend-run
 
@@ -28,6 +28,7 @@ cd apps/niha0-frontend && npm start
 ```
 
 - App : http://localhost:4200 → login → **/app/ai-office**
+- Modules NIHAO_05 : `/app/chat`, `/app/runtime`, `/app/studio`, `/app/marketplace`, `/app/governance`, `/app/pim`, `/app/bi`
 - API : http://localhost:8080/api
 - Health : http://localhost:8080/api/actuator/health
 - Raccourci clavier : **O** (AI Office)
@@ -64,7 +65,10 @@ Interrupteur dans **AI Office** (☀ SolarPunk / 🌙 Cyberpunk / ◐ Auto).
 
 ## Docs
 
-- [**Cartographie architecture (Phase 2)**](docs/architecture/map.md) — REAL / MOCK / SHELL
+- [**Plan d’action NIHAO_05**](docs/NIHAO_05_PLAN_ACTION_COMPLET.md) · [statut](docs/NIHAO_05_STATUS.md) · [cadrage Phase 0](docs/NIHAO_03_PHASE0_CADRAGE.md)
+- [**Cartographie architecture**](docs/architecture/map.md) — REAL / MOCK / SHELL
+- [**NIHAO_05 statut phases**](docs/NIHAO_05_STATUS.md) — runtime, gouvernance, studio, GTM
+- [**GTM onboarding**](docs/gtm/onboarding-training.md) · [cas d’usage](docs/gtm/use-cases.md)
 - [**Statut 50 tâches**](docs/product/tasks-50-status.md)
 - [**Checklist produit fini**](docs/product/finished-checklist.md)
 - [**Statut 30 phases MVP**](docs/mvp/phases-status.md)
@@ -72,7 +76,7 @@ Interrupteur dans **AI Office** (☀ SolarPunk / 🌙 Cyberpunk / ◐ Auto).
 - [Audit sécurité Phase 3](docs/security/phase-03-audit.md)
 - [Three.js](docs/architecture/threejs-ai-office.md)
 - [Données démo](docs/product/demo-data.md)
-- [Ops / backup](docs/ops/)
+- [**Ops / backup**](docs/ops/) · [**Cloudflare + Render**](docs/ops/cloudflare-render.md) · [choix d’hôte](docs/ops/host-choice.md)
 - [Audit complet (Tâche 1)](docs/audit/project-audit.md) — REAL / MOCK / SHELL, risques, zones critiques
 - [**Checklist commerciale 0.3**](docs/product/commercial-checklist.md) — SumUp, MFA, cookies, e-mails
 - [SumUp billing](docs/ops/sumup-billing.md)

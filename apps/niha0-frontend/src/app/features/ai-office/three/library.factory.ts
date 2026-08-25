@@ -81,6 +81,8 @@ export function createDataLibrary(
         glowMat.clone(),
       );
       cart.position.set(-0.28 + j * 0.28, 0.62 + i * 0.45, 0.12);
+      cart.userData['dataScroll'] = true;
+      cart.userData['scrollPhase'] = i * 0.7 + j * 0.35;
       group.add(cart);
     }
   }
@@ -120,6 +122,18 @@ export function createDataLibrary(
   );
   edge.position.set(0, plate.position.y - 0.14, 0.32);
   group.add(edge);
+
+  for (let k = 0; k < 5; k++) {
+    const line = new THREE.Mesh(
+      new THREE.BoxGeometry(0.72, 0.012, 0.01),
+      mat(accent, { emissive: accent, emissiveIntensity: 0.7, transparent: true, opacity: 0.8 }),
+    );
+    line.position.set(0, 0.55 + k * 0.28, 0.28);
+    line.userData['dataScroll'] = true;
+    line.userData['scrollPhase'] = k * 0.9;
+    line.userData['scrollAxis'] = 'x';
+    group.add(line);
+  }
 
   const hit = new THREE.Mesh(
     new THREE.BoxGeometry(1.35, 2.5, 0.9),

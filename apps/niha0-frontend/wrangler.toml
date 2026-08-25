@@ -1,0 +1,4 @@
+# Cloudflare Pages project config (root = apps/niha0-frontend)
+name = "niha0"
+compatibility_date = "2026-08-25"
+pages_build_output_dir = "dist/niha0-frontend/browser"

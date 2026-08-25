@@ -6,6 +6,41 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: '0.7.0',
+    date: '2026-08-25',
+    sections: [
+      {
+        title: 'Ajouts',
+        items: [
+          'Studio drag-and-drop (palette, canvas, arêtes)',
+          'pgvector + ERP REAL (CMS/SCM/MRP/ETL/EDI)',
+          'Access token HttpOnly + CSRF complet en prod',
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.6.2',
+    date: '2026-08-25',
+    sections: [
+      {
+        title: 'Ajouts',
+        items: [
+          'RBAC permissions appliquées (JWT authorities + PreAuthorize OS)',
+          'Chat branché sur le RAG réel + badges provider / démo',
+          'Templates Studio simple / HITL ; Runtime lit les slugs Studio',
+          'Rate-limit OS (chat, runtime, scan guardrails)',
+        ],
+      },
+      {
+        title: 'Corrections',
+        items: [
+          'Bouton Reprendre runtime aligné sur le statut INTERRUPTED',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.4.0',
     date: '2026-08-25',
     sections: [

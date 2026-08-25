@@ -38,3 +38,7 @@ export {
   presetLabel,
 } from './scene-presets';
 export type { SceneVisualPreset } from './scene-presets';
+export { DESK_BY_CODE, MEZZANINE_ASSISTANTS, CEO_STAFF, TOTEM_ANIMALS, STAIRS_OBSTACLE } from './layout';
+export { createLedPair, setLedMode, pulseLeds } from './led.factory';
+export { createTotemAnimal } from './totem.factory';
+export { createMezzanine } from './mezzanine.factory';

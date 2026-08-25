@@ -1,0 +1,105 @@
+# Render Blueprint — NIHAO API + Postgres (+ Redis optionnel)
+# Docs: docs/ops/cloudflare-render.md
+#
+# Deploy: connect this repo in Render Dashboard → Blueprint → apply render.yaml
+# Or: https://dashboard.render.com/blueprints
+
+databases:
+  - name: niha0-db
+    plan: basic-256mb
+    databaseName: niha0
+    user: niha0
+    postgresMajorVersion: "17"
+
+services:
+  - type: redis
+    name: niha0-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+  - type: web
+    name: niha0-api
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./apps/niha0-backend/Dockerfile
+    dockerContext: ./apps/niha0-backend
+    healthCheckPath: /api/actuator/health
+    autoDeploy: true
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: "8080"
+      # Render postgres:// URL — normalized to jdbc:postgresql:// at boot
+      - key: DATABASE_URL
+        fromDatabase:
+          name: niha0-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: niha0-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: niha0-db
+          property: password
+      - key: NIHA0_REALTIME_REDIS_URL
+        fromService:
+          name: niha0-redis
+          type: redis
+          property: connectionString
+      - key: REALTIME_MODE
+        value: redis
+      - key: DEMO_LOGIN_ENABLED
+        value: "false"
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_OPENAI_ALLOW_DEMO_FALLBACK
+        value: "false"
+      - key: MAIL_MODE
+        value: smtp
+      - key: BILLING_PROVIDER
+        value: sumup
+      - key: STORAGE_MODE
+        value: s3
+      - key: STORAGE_S3_PATH_STYLE
+        value: "true"
+      - key: STORAGE_S3_REGION
+        value: auto
+      # Secrets — set in Render dashboard (Blueprint sync: false)
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: APP_PUBLIC_URL
+        sync: false
+      - key: STORAGE_S3_ENDPOINT
+        sync: false
+      - key: STORAGE_S3_ACCESS_KEY
+        sync: false
+      - key: STORAGE_S3_SECRET_KEY
+        sync: false
+      - key: STORAGE_S3_BUCKET
+        sync: false
+      - key: AI_OPENAI_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: SPRING_MAIL_HOST
+        sync: false
+      - key: SPRING_MAIL_PORT
+        sync: false
+      - key: SPRING_MAIL_USERNAME
+        sync: false
+      - key: SPRING_MAIL_PASSWORD
+        sync: false
+      - key: SUMUP_API_KEY
+        sync: false
+      - key: SUMUP_MERCHANT_CODE
+        sync: false
+      - key: SUMUP_WEBHOOK_SECRET
+        sync: false
+      - key: SUMUP_REDIRECT_URL
+        sync: false

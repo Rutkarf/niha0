@@ -16,6 +16,7 @@ import {
   type RoomCameraFraming,
 } from './camera-framing';
 import { createCartoonAvatar } from './avatar.factory';
+import { createAgentDesk, createCeoOffice, type CeoOfficeOptions } from './desk.factory';
 import { updateCeoAvatarVisuals } from './ceo-avatar.factory';
 import {
   triggerBellPress,
@@ -23,7 +24,19 @@ import {
   updateCeoDoorVisuals,
   type CeoDoorParts,
 } from './ceo-door.factory';
-import { createAgentDesk, createCeoOffice, type CeoOfficeOptions } from './desk.factory';
+import { createCeoStaffAssistants } from './ceo-staff.factory';
+import { createCentralizers, tickCentralizer, type CentralizerRuntime } from './centralizer.factory';
+import {
+  AISLE_X,
+  CEO_POS as CEO_LAYOUT,
+  DESK_BY_CODE,
+  DESK_POSITIONS,
+  STAIRS_OBSTACLE,
+  TOTEM_ANIMALS,
+} from './layout';
+import { createLedPair, pulseLeds, setLedMode, tickLedPair } from './led.factory';
+import { createMezzanine, createMezzanineAssistants, type ScenicRuntime } from './mezzanine.factory';
+import { createTotemAnimal, tickTotem } from './totem.factory';
 import {
   resolveAgentVisualStatus,
   STATUS_TINT,
@@ -58,45 +71,12 @@ import {
   tickBubbleFade,
 } from './ui/speech-bubble.factory';
 
-/** Desk (x, z) by agent code — 3 poles on the right. */
-const DESK_BY_CODE: Record<string, [number, number]> = {
-  // Pôle Clients (front-right, +z)
-  CRM: [-2, 3],
-  VENTES: [1, 3],
-  SUPPORT: [4, 3],
-  MARKETING: [7, 3],
-  // Pôle Gestion (mid)
-  ERP: [-2, 0],
-  COMPTABILITE: [1, 0],
-  RH: [4, 0],
-  JURIDIQUE: [7, 0],
-  // Pôle Ops (back, -z)
-  STOCK: [-1, -3],
-  ANALYTICS: [2.5, -3],
-  STRATEGIE: [6, -3],
-};
-
-const DESK_POSITIONS: Array<[number, number, number]> = [
-  [-2, 0, 3],
-  [1, 0, 3],
-  [4, 0, 3],
-  [7, 0, 3],
-  [-2, 0, 0],
-  [1, 0, 0],
-  [4, 0, 0],
-  [7, 0, 0],
-  [-1, 0, -3],
-  [2.5, 0, -3],
-  [6, 0, -3],
-];
-
-const CEO_POS = new THREE.Vector3(-10, 0, 0);
+const CEO_POS = new THREE.Vector3(CEO_LAYOUT.x, CEO_LAYOUT.y, CEO_LAYOUT.z);
 /** Wait spot in front of the glass door (+x side of CEO office). */
 const DOOR_WAIT_POS = new THREE.Vector3(-7.5, 0, 0);
 const WAIT_POS = DOOR_WAIT_POS;
 /** Hold point before the glass door when it is closed. */
 const DOOR_HOLD_POS = new THREE.Vector3(-5.8, 0, 0);
-const AISLE_X = -4.5;
 
 const TASK_STATUSES = new Set(['THINKING', 'PREPARING', 'EXECUTING']);
 
@@ -133,6 +113,7 @@ interface AgentRuntime {
   dialogueAgent: THREE.Sprite | null;
   dialogueCeo: THREE.Sprite | null;
   approvalMarker: THREE.Mesh | null;
+  leds: THREE.Group;
 }
 
 interface LibraryRuntime {
@@ -140,6 +121,7 @@ interface LibraryRuntime {
   group: THREE.Group;
 }
 
+type PickKind = 'agent' | 'library' | 'ceo' | 'bell' | 'scenic' | 'centralizer' | 'totem';
 type SelectKind = 'agent' | 'ceo' | 'library' | 'bell';
 type SelectCallback = (kind: SelectKind, id?: string) => void;
 type ApprovalSceneCallback = (event: 'agent-moving' | 'agent-at-door' | 'bell-click', agentId?: string) => void;
@@ -157,6 +139,9 @@ export class OfficeSceneManager {
   private palette: ScenePalette = getPalette('SOLARPUNK');
   private agents: AgentRuntime[] = [];
   private libraries: LibraryRuntime[] = [];
+  private scenic: ScenicRuntime[] = [];
+  private centralizers: CentralizerRuntime[] = [];
+  private totems: THREE.Group[] = [];
   private ceoGroup: THREE.Group | null = null;
   private ceoDoorParts: CeoDoorParts | null = null;
   private ceoAvatar: THREE.Group | null = null;
@@ -197,6 +182,7 @@ export class OfficeSceneManager {
 
   private hoveredAgentId: string | null = null;
   private hoveredLibraryId: string | null = null;
+  private hoveredScenicId: string | null = null;
   private selectedAgentId: string | null = null;
   private selectedLibraryId: string | null = null;
   private keyboardFocusIndex = 0;
@@ -266,6 +252,7 @@ export class OfficeSceneManager {
     this.spawnCeo();
     this.spawnAgents(agents);
     this.spawnLibraries();
+    this.spawnScenicWorld();
     this.applyHomeFraming();
     if (this.renderer) {
       this.renderer.setClearColor(this.palette.bg);
@@ -552,6 +539,9 @@ export class OfficeSceneManager {
     this.tooltipCb = null;
     this.agents = [];
     this.libraries = [];
+    this.scenic = [];
+    this.centralizers = [];
+    this.totems = [];
     this.ceoGroup = null;
     this.ceoDoorParts = null;
     this.ceoAvatar = null;
@@ -574,6 +564,7 @@ export class OfficeSceneManager {
       this.spawnCeo();
       this.spawnAgents(configs);
       this.spawnLibraries();
+      this.spawnScenicWorld();
 
       if (preserveCamera && savedCamPos && this.camera && this.controls) {
         this.lookAtTarget.copy(savedTarget);
@@ -626,6 +617,9 @@ export class OfficeSceneManager {
     }
     this.agents = [];
     this.libraries = [];
+    this.scenic = [];
+    this.centralizers = [];
+    this.totems = [];
     this.ceoGroup = null;
     this.ceoDoorParts = null;
     this.ceoAvatar = null;
@@ -633,7 +627,7 @@ export class OfficeSceneManager {
 
   private spawnCeo(): void {
     if (!this.scene) return;
-    this.ceoGroup = createCeoOffice(this.palette, this.ceoOptions);
+    this.ceoGroup = createCeoOffice(this.palette, this.ceoOptions, this.theme);
     this.ceoGroup.position.copy(CEO_POS);
     this.ceoGroup.userData['type'] = 'ceo';
     this.ceoDoorParts = (this.ceoGroup.userData['doorParts'] as CeoDoorParts | undefined) ?? null;
@@ -664,6 +658,10 @@ export class OfficeSceneManager {
       avatar.userData['type'] = 'avatar';
       this.scene!.add(avatar);
 
+      const leds = createLedPair(cfg.id);
+      leds.position.set(0, 1.52, 0);
+      avatar.add(leds);
+
       const focusRing = createFocusRing(cfg.id, accent);
       focusRing.position.set(x, focusRing.position.y, z);
       this.scene!.add(focusRing);
@@ -682,6 +680,7 @@ export class OfficeSceneManager {
         dialogueAgent: null,
         dialogueCeo: null,
         approvalMarker: null,
+        leds,
       };
 
       this.updateAgentRingAccent(runtime);
@@ -709,6 +708,39 @@ export class OfficeSceneManager {
     }
   }
 
+  private spawnScenicWorld(): void {
+    if (!this.scene) return;
+    this.scenic = [];
+    this.centralizers = [];
+    this.totems = [];
+
+    const mezz = createMezzanine(this.palette, this.theme);
+    this.scene.add(mezz);
+
+    for (const runtime of [
+      ...createMezzanineAssistants(this.palette),
+      ...createCeoStaffAssistants(this.palette),
+    ]) {
+      this.scene.add(runtime.group);
+      this.scenic.push(runtime);
+    }
+
+    for (const hub of createCentralizers(this.palette, this.theme)) {
+      this.scene.add(hub.group);
+      this.centralizers.push(hub);
+    }
+
+    for (const def of TOTEM_ANIMALS) {
+      const animal = createTotemAnimal(def);
+      this.scene.add(animal);
+      this.totems.push(animal);
+    }
+  }
+
+  private navObstacles(): ReturnType<typeof activeDoorObstacles> {
+    return activeDoorObstacles(this.isCeoDoorBlocking(), CEO_DOOR_OBSTACLE, [STAIRS_OBSTACLE]);
+  }
+
   private beginWalkToCeo(runtime: AgentRuntime): void {
     this.approvalCb?.('agent-moving', runtime.config.id);
     if (this.reducedMotion) {
@@ -721,7 +753,7 @@ export class OfficeSceneManager {
     }
     const doorClosed = this.isCeoDoorBlocking();
     const goal = doorClosed ? DOOR_HOLD_POS : WAIT_POS;
-    const obstacles = activeDoorObstacles(doorClosed, CEO_DOOR_OBSTACLE);
+    const obstacles = this.navObstacles();
     const waypoints = findPath(
       { x: runtime.avatar.position.x, z: runtime.avatar.position.z },
       { x: goal.x, z: goal.z },
@@ -766,8 +798,7 @@ export class OfficeSceneManager {
       this.syncBubblesForAgent(runtime);
       return;
     }
-    const doorClosed = this.isCeoDoorBlocking();
-    const obstacles = activeDoorObstacles(doorClosed, CEO_DOOR_OBSTACLE);
+    const obstacles = this.navObstacles();
     const waypoints = findPath(
       { x: runtime.avatar.position.x, z: runtime.avatar.position.z },
       { x: runtime.home.x, z: runtime.home.z },
@@ -1028,6 +1059,35 @@ export class OfficeSceneManager {
       const cur = lib.group.scale.x;
       const next = cur + (target - cur) * Math.min(1, dt * 10);
       lib.group.scale.setScalar(next);
+      if (!this.reducedMotion) {
+        lib.group.traverse((obj) => {
+          if (!(obj instanceof THREE.Mesh) || !obj.userData['dataScroll']) return;
+          const phase = (obj.userData['scrollPhase'] as number) ?? 0;
+          if (obj.userData['scrollAxis'] === 'x') {
+            obj.position.x = Math.sin(t * 1.8 + phase) * 0.12;
+          } else {
+            obj.position.z = 0.12 + Math.sin(t * 2.1 + phase) * 0.04;
+          }
+        });
+      }
+    }
+
+    for (const scenic of this.scenic) {
+      tickLedPair(scenic.leds, t, this.reducedMotion);
+      const parts = scenic.avatar.userData['parts'] as { head?: THREE.Object3D } | undefined;
+      if (parts?.head && !this.reducedMotion) {
+        parts.head.position.y = 1.18 + Math.sin(t * 2.1 + scenic.group.position.x) * 0.02;
+      }
+    }
+    for (const hub of this.centralizers) {
+      tickCentralizer(hub.group, t, this.reducedMotion);
+    }
+    for (const totem of this.totems) {
+      tickTotem(totem, dt, t, this.reducedMotion);
+    }
+    for (const runtime of this.agents) {
+      this.syncAgentLeds(runtime);
+      tickLedPair(runtime.leds, t, this.reducedMotion);
     }
 
     // CEO office door, bell, avatar states
@@ -1077,7 +1137,7 @@ export class OfficeSceneManager {
       const streams = this.scene.getObjectByName('data-streams');
       streams?.children.forEach((child) => {
         const phase = (child.userData['streamPhase'] as number) ?? 0;
-        child.position.y = 0.18 + Math.sin(t * 2.5 + phase) * 0.08;
+        child.position.y = 0.22 + Math.sin(t * 2.5 + phase) * 0.08;
       });
     }
 
@@ -1244,6 +1304,8 @@ export class OfficeSceneManager {
       if (runtime) {
         pulseObjectClick(runtime.desk, this.reducedMotion);
         pulseObjectClick(runtime.avatar, this.reducedMotion);
+        pulseLeds(runtime.leds);
+        setLedMode(runtime.leds, 'green');
       }
       this.selectedAgentId = hit.id;
       this.selectedLibraryId = null;
@@ -1251,6 +1313,26 @@ export class OfficeSceneManager {
       this.applySelectionVisuals();
       this.focusAgent(hit.id);
       this.selectCb('agent', hit.id);
+      return;
+    }
+    if (hit.kind === 'scenic' && hit.id) {
+      const scenic = this.scenic.find((s) => s.id === hit.id);
+      if (scenic) {
+        pulseObjectClick(scenic.group, this.reducedMotion);
+        pulseLeds(scenic.leds);
+        setLedMode(scenic.leds, 'both');
+      }
+      this.hoveredScenicId = hit.id;
+      return;
+    }
+    if (hit.kind === 'centralizer' && hit.id) {
+      const hub = this.centralizers.find((c) => c.id === hit.id);
+      if (hub) pulseObjectClick(hub.group, this.reducedMotion);
+      return;
+    }
+    if (hit.kind === 'totem') {
+      const totem = this.totems.find((t) => t.userData['totemKind'] === hit.id);
+      if (totem) pulseObjectClick(totem, this.reducedMotion);
       return;
     }
     if (hit.kind === 'library' && hit.id) {
@@ -1366,12 +1448,24 @@ export class OfficeSceneManager {
     const nextBell = hit?.kind === 'bell';
     if (hit?.kind === 'agent') nextAgent = hit.id ?? null;
     if (hit?.kind === 'library') nextLib = hit.id ?? null;
+    const nextScenic = hit?.kind === 'scenic' ? hit.id ?? null : null;
 
     this.emitTooltip(hit, clientX, clientY);
+
+    const pointerHit =
+      !!nextAgent ||
+      !!nextLib ||
+      nextCeo ||
+      nextBell ||
+      !!nextScenic ||
+      hit?.kind === 'centralizer' ||
+      hit?.kind === 'totem';
+    this.renderer.domElement.style.cursor = pointerHit ? 'pointer' : 'default';
 
     if (
       nextAgent === this.hoveredAgentId &&
       nextLib === this.hoveredLibraryId &&
+      nextScenic === this.hoveredScenicId &&
       nextCeo === this.hoveredCeo &&
       nextBell === this.bellHovered
     ) {
@@ -1380,18 +1474,17 @@ export class OfficeSceneManager {
 
     this.hoveredAgentId = nextAgent;
     this.hoveredLibraryId = nextLib;
+    this.hoveredScenicId = nextScenic;
     this.bellHovered = nextBell;
     if (nextCeo !== this.hoveredCeo) {
       this.hoveredCeo = nextCeo;
       if (this.ceoGroup) setEmissiveBoost(this.ceoGroup, nextCeo);
     }
     this.applySelectionVisuals();
-    this.renderer.domElement.style.cursor =
-      nextAgent || nextLib || nextCeo || nextBell ? 'pointer' : 'default';
   }
 
   private emitTooltip(
-    hit: { kind: 'agent' | 'library' | 'ceo' | 'bell'; id?: string } | null,
+    hit: { kind: PickKind; id?: string } | null,
     clientX: number,
     clientY: number,
   ): void {
@@ -1453,6 +1546,42 @@ export class OfficeSceneManager {
         ndcY,
         visible: true,
       });
+      return;
+    }
+    if (hit.kind === 'scenic' && hit.id) {
+      const scenic = this.scenic.find((s) => s.id === hit.id);
+      this.tooltipCb({
+        kind: 'scenic',
+        title: scenic?.name ?? hit.id,
+        subtitle: scenic?.role ?? 'Assistant',
+        ndcX,
+        ndcY,
+        visible: true,
+      });
+      return;
+    }
+    if (hit.kind === 'centralizer' && hit.id) {
+      const hub = this.centralizers.find((c) => c.id === hit.id);
+      this.tooltipCb({
+        kind: 'centralizer',
+        title: hub?.name ?? 'Centralisateur',
+        subtitle: 'Bande claire — flux de données',
+        ndcX,
+        ndcY,
+        visible: true,
+      });
+      return;
+    }
+    if (hit.kind === 'totem') {
+      const totem = this.totems.find((t) => t.userData['totemKind'] === hit.id);
+      this.tooltipCb({
+        kind: 'totem',
+        title: (totem?.userData['label'] as string) || 'Totem',
+        subtitle: 'Animal totem',
+        ndcX,
+        ndcY,
+        visible: true,
+      });
     }
   }
 
@@ -1463,7 +1592,7 @@ export class OfficeSceneManager {
   private pickInteractive(
     clientX: number,
     clientY: number,
-  ): { kind: 'agent' | 'library' | 'ceo' | 'bell'; id?: string } | null {
+  ): { kind: PickKind; id?: string } | null {
     if (!this.renderer || !this.camera || !this.scene) return null;
     const rect = this.renderer.domElement.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
@@ -1477,6 +1606,15 @@ export class OfficeSceneManager {
     }
     for (const lib of this.libraries) {
       targets.push(lib.group);
+    }
+    for (const s of this.scenic) {
+      targets.push(s.group);
+    }
+    for (const hub of this.centralizers) {
+      targets.push(hub.group);
+    }
+    for (const totem of this.totems) {
+      targets.push(totem);
     }
     if (this.ceoGroup) targets.push(this.ceoGroup);
     if (this.ceoDoorParts?.bellButton) targets.push(this.ceoDoorParts.bellButton);
@@ -1493,6 +1631,15 @@ export class OfficeSceneManager {
       }
       if (obj.userData['libraryId']) {
         return { kind: 'library', id: obj.userData['libraryId'] as string };
+      }
+      if (obj.userData['scenicId']) {
+        return { kind: 'scenic', id: obj.userData['scenicId'] as string };
+      }
+      if (obj.userData['centralizerId']) {
+        return { kind: 'centralizer', id: obj.userData['centralizerId'] as string };
+      }
+      if (obj.userData['type'] === 'totem') {
+        return { kind: 'totem', id: obj.userData['totemKind'] as string };
       }
       if (obj.userData['agentId']) {
         return { kind: 'agent', id: obj.userData['agentId'] as string };
@@ -1532,6 +1679,20 @@ export class OfficeSceneManager {
     const accent = accentForCode(runtime.config.code);
     const visual = resolveAgentVisualStatus(runtime.config.status);
     setFocusRingAccent(runtime.focusRing, blendHex(accent, STATUS_TINT[visual]));
+  }
+
+  private syncAgentLeds(runtime: AgentRuntime): void {
+    if (runtime.config.status === 'WAITING_APPROVAL' || runtime.state === 'WAITING_AT_CEO') {
+      setLedMode(runtime.leds, 'red');
+      return;
+    }
+    if (runtime.config.id === this.selectedAgentId) {
+      setLedMode(runtime.leds, 'green');
+      return;
+    }
+    const pulseUntil = (runtime.leds.userData['pulseUntil'] as number) ?? 0;
+    if (performance.now() < pulseUntil) return;
+    setLedMode(runtime.leds, 'off');
   }
 
   private applyHomeFraming(preserveFocus = false): void {

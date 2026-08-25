@@ -1,4 +1,5 @@
 import type { NavigationObstacle, Waypoint } from './navigation.types';
+import { ROOM } from './layout';
 
 export interface PathPoint {
   x: number;
@@ -6,10 +7,10 @@ export interface PathPoint {
 }
 
 const CELL = 0.5;
-const OFFICE_MIN_X = -14;
-const OFFICE_MAX_X = 14;
-const OFFICE_MIN_Z = -10;
-const OFFICE_MAX_Z = 10;
+const OFFICE_MIN_X = ROOM.minX + 1;
+const OFFICE_MAX_X = ROOM.maxX - 1;
+const OFFICE_MIN_Z = ROOM.minZ + 1;
+const OFFICE_MAX_Z = ROOM.maxZ - 1;
 
 interface GridNode {
   gx: number;
@@ -96,7 +97,7 @@ export function findPath(
 
   let found: GridNode | null = null;
   let iterations = 0;
-  const maxIterations = 4000;
+  const maxIterations = 8000;
 
   while (open.length && iterations++ < maxIterations) {
     open.sort((a, b) => a.f - b.f);
@@ -180,7 +181,9 @@ function simplify(points: PathPoint[]): PathPoint[] {
 export function activeDoorObstacles(
   doorBlocking: boolean,
   doorObstacle: NavigationObstacle,
+  extra: NavigationObstacle[] = [],
 ): NavigationObstacle[] {
-  if (!doorBlocking) return [];
-  return [{ ...doorObstacle, active: true }];
+  const list = extra.filter((o) => o.active).map((o) => ({ ...o, active: true }));
+  if (doorBlocking) list.push({ ...doorObstacle, active: true });
+  return list;
 }

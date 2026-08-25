@@ -38,6 +38,11 @@ const LABEL_MAP: Record<string, string> = {
   mrp: 'MRP',
   etl: 'ETL',
   edi: 'EDI',
+  chat: 'Chat',
+  studio: 'Studio',
+  marketplace: 'Marketplace',
+  runtime: 'Runtime',
+  governance: 'Gouvernance',
 };
 
 @Component({

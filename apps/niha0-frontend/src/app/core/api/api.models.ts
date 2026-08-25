@@ -369,3 +369,140 @@ export interface UpdateMemberPayload {
   role: string;
   active?: boolean;
 }
+
+export interface PimProduct extends EntityBase {
+  sku: string;
+  name: string;
+  description?: string;
+  category?: string;
+  status: string;
+  attributesJson?: string;
+  updatedAt?: string;
+}
+
+export interface PimVariant extends EntityBase {
+  productId: string;
+  sku: string;
+  name: string;
+  priceCents: number;
+  currency: string;
+  status: string;
+  attributesJson?: string;
+}
+
+export interface ErpItem extends EntityBase {
+  module: string;
+  code: string;
+  title: string;
+  status: string;
+  detailsJson?: string;
+  updatedAt?: string;
+}
+
+export interface ChatThread extends EntityBase {
+  title: string;
+  agentId?: string;
+  updatedAt?: string;
+}
+
+export interface ChatMessage extends EntityBase {
+  threadId: string;
+  role: string;
+  content: string;
+  metadataJson?: string;
+}
+
+export interface ChatPostMessageResponse {
+  userMessage: ChatMessage;
+  assistantMessage: ChatMessage;
+}
+
+export interface AgentRuntimeRun extends EntityBase {
+  agentId?: string;
+  graphName: string;
+  status: string;
+  currentNode?: string;
+  stateJson?: string;
+  interruptReason?: string;
+  modelProvider?: string;
+  updatedAt?: string;
+}
+
+export interface AgentRuntimeStep extends EntityBase {
+  runId: string;
+  nodeName: string;
+  stepIndex: number;
+  inputJson?: string;
+  outputJson?: string;
+  status: string;
+  latencyMs: number;
+}
+
+export interface AgentDefinition extends EntityBase {
+  slug: string;
+  name: string;
+  description?: string;
+  graphJson: string;
+  version: number;
+  visibility: string;
+  status: string;
+  updatedAt?: string;
+}
+
+export interface MarketplaceListing extends EntityBase {
+  definitionId: string;
+  title: string;
+  summary?: string;
+  visibility: string;
+  category: string;
+  installCount: number;
+  publishedAt?: string;
+}
+
+export interface MarketplaceInstall extends EntityBase {
+  listingId: string;
+  configJson?: string;
+}
+
+export interface Permission {
+  id: string;
+  code: string;
+  description: string;
+}
+
+export interface GuardrailEvent extends EntityBase {
+  eventType: string;
+  severity: string;
+  source: string;
+  detail?: string;
+  blocked: boolean;
+}
+
+export interface ToolSandboxLog extends EntityBase {
+  toolName: string;
+  allowed: boolean;
+  durationMs: number;
+  detail?: string;
+  createdBy?: string;
+}
+
+export interface AgentMemory extends EntityBase {
+  scope: string;
+  scopeRef?: string;
+  keyName: string;
+  content: string;
+  metadataJson?: string;
+  expiresAt?: string;
+}
+
+/** BI report — backend keys: pimProducts, marketplaceListings, runtimeRuns */
+export interface BiReport {
+  kpis?: DashboardKpis;
+  pimProducts?: number;
+  marketplaceListings?: number;
+  runtimeRuns?: number;
+  pimProductCount?: number;
+  marketplaceListingCount?: number;
+  runtimeRunCount?: number;
+  [key: string]: unknown;
+}

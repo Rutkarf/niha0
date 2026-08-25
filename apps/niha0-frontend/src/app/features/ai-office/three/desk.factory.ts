@@ -3,7 +3,8 @@ import type { CompanyBranding } from '../../../core/workspace/professional.model
 import { createCompanyCarpet, createCompanyLogoPlaque } from './branding.factory';
 import { createCeoAvatar } from './ceo-avatar.factory';
 import { createCeoGlassEntrance, type CeoDoorParts } from './ceo-door.factory';
-import type { ScenePalette } from './types';
+import { createGlassMaterial, createGoldFrameMaterial } from './glass.material';
+import type { ScenePalette, SceneTheme } from './types';
 
 function mat(
   hex: string,
@@ -272,7 +273,11 @@ export interface CeoOfficeOptions {
  * Premium CEO Command Center — opens toward +x (room center).
  * Waiting ring at local (+2.5, 0, 0) = toward open space.
  */
-export function createCeoOffice(palette: ScenePalette, options: CeoOfficeOptions = {}): THREE.Group {
+export function createCeoOffice(
+  palette: ScenePalette,
+  options: CeoOfficeOptions = {},
+  theme: SceneTheme = 'SOLARPUNK',
+): THREE.Group {
   const group = new THREE.Group();
   group.name = 'ceo-office';
   group.userData['type'] = 'ceo';
@@ -281,20 +286,8 @@ export function createCeoOffice(palette: ScenePalette, options: CeoOfficeOptions
   const ownerLabel = options.ownerLabel || 'CEO';
   const branding = options.branding;
 
-  const glassMat = mat(palette.glass, {
-    transparent: true,
-    opacity: 0.35,
-    metalness: 0.6,
-    roughness: 0.15,
-    emissive: palette.neon,
-    emissiveIntensity: 0.08,
-  });
-  const frameMat = mat(palette.accent, {
-    metalness: 0.5,
-    roughness: 0.35,
-    emissive: palette.neon,
-    emissiveIntensity: 0.2,
-  });
+  const glassMat = createGlassMaterial(palette, theme);
+  const frameMat = createGoldFrameMaterial(palette);
   const wood = mat(palette.wood, { roughness: 0.55 });
   const ceoMat = mat(palette.ceo, { emissive: palette.ceo, emissiveIntensity: 0.3, metalness: 0.25 });
 
@@ -307,7 +300,7 @@ export function createCeoOffice(palette: ScenePalette, options: CeoOfficeOptions
 
   const trim = new THREE.Mesh(
     new THREE.BoxGeometry(5.7, 0.04, 5.1),
-    mat(palette.neon, { emissive: palette.neon, emissiveIntensity: 0.4 }),
+    mat(palette.gold, { emissive: palette.gold, emissiveIntensity: 0.4, metalness: 0.75, roughness: 0.22 }),
   );
   trim.position.y = 0.22;
   group.add(trim);

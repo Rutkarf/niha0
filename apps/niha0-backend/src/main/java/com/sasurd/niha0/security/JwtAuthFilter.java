@@ -1,6 +1,7 @@
 package com.sasurd.niha0.security;
 
 import com.sasurd.niha0.common.Role;
+import com.sasurd.niha0.governance.PermissionCatalogService;
 import com.sasurd.niha0.realtime.SseTicketService;
 import com.sasurd.niha0.tenancy.TenantContext;
 import com.sasurd.niha0.tenancy.TenantRlsSupport;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -26,13 +28,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final SseTicketService sseTicketService;
     private final TenantRlsSupport tenantRlsSupport;
+    private final PermissionCatalogService permissionCatalogService;
 
     public JwtAuthFilter(JwtService jwtService,
                          SseTicketService sseTicketService,
-                         TenantRlsSupport tenantRlsSupport) {
+                         TenantRlsSupport tenantRlsSupport,
+                         PermissionCatalogService permissionCatalogService) {
         this.jwtService = jwtService;
         this.sseTicketService = sseTicketService;
         this.tenantRlsSupport = tenantRlsSupport;
+        this.permissionCatalogService = permissionCatalogService;
     }
 
     @Override
@@ -50,6 +55,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
 
             String token = extractBearerToken(request);
+            if (token == null) {
+                token = extractAccessCookie(request);
+            }
             if (token != null) {
                 try {
                     Claims claims = jwtService.parseClaims(token);
@@ -72,11 +80,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private enum SseTicketOutcome { NOT_APPLICABLE, AUTHENTICATED, REJECTED }
 
-    /**
-     * EventSource cannot send Authorization headers. Clients obtain a one-time ticket
-     * via POST /realtime/ticket (Bearer JWT) then connect with ?ticket=…
-     * JWT in query string is no longer accepted.
-     */
     private SseTicketOutcome authenticateSseTicket(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         String path = request.getRequestURI();
@@ -108,8 +111,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                    Role role) {
         TenantContext.set(organizationId, userId);
         tenantRlsSupport.applyOrganization(organizationId);
+        List<String> permissions = permissionCatalogService.permissionCodesFor(role);
         Niha0UserDetails userDetails = new Niha0UserDetails(
-                userId, organizationId, email, "", role, true);
+                userId, organizationId, email, "", role, true, permissions);
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -120,6 +124,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith("Bearer ")) {
             return header.substring(7);
+        }
+        return null;
+    }
+
+    private String extractAccessCookie(HttpServletRequest request) {
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (jakarta.servlet.http.Cookie cookie : cookies) {
+            if (com.sasurd.niha0.identity.AuthCookieWriter.ACCESS_COOKIE.equals(cookie.getName())
+                    && cookie.getValue() != null
+                    && !cookie.getValue().isBlank()) {
+                return cookie.getValue();
+            }
         }
         return null;
     }

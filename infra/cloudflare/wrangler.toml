@@ -1,0 +1,19 @@
+# Cloudflare Pages — NIHAO frontend
+# Project root for Pages: apps/niha0-frontend (build + functions)
+#
+# CLI:
+#   cd apps/niha0-frontend
+#   npx wrangler pages deploy dist/niha0-frontend/browser --project-name=niha0
+#
+# Or connect GitHub → Cloudflare Pages with:
+#   Build command: npm ci && npm run build
+#   Build output: dist/niha0-frontend/browser
+#   Root directory: apps/niha0-frontend
+
+name = "niha0"
+compatibility_date = "2026-08-25"
+pages_build_output_dir = "dist/niha0-frontend/browser"
+
+# Set in Cloudflare dashboard → Pages → Settings → Environment variables:
+#   API_ORIGIN = https://niha0-api.onrender.com
+#   (no trailing slash; backend context-path is /api)
