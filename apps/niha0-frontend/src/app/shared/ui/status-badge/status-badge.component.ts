@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { statusLabel } from '../status-labels';
 
 @Component({
   selector: 'app-status-badge',
@@ -47,14 +48,14 @@ import { Component, computed, input } from '@angular/core';
 export class StatusBadgeComponent {
   readonly status = input.required<string>();
 
-  readonly label = computed(() => this.status().replaceAll('_', ' '));
+  readonly label = computed(() => statusLabel(this.status()));
 
   readonly badgeClass = computed(() => {
     const s = this.status().toUpperCase();
-    if (['PAID', 'COMPLETED', 'RESOLVED', 'APPROVED', 'ACTIVE', 'AVAILABLE'].includes(s)) return 'success';
-    if (['OPEN', 'REQUEST_APPROVAL', 'WAITING_APPROVAL', 'SENT', 'HIGH', 'PREPARING', 'DEFERRED'].includes(s)) return 'warning';
-    if (['FAILED', 'REJECTED', 'ERROR', 'CANCELLED'].includes(s)) return 'danger';
-    if (['NEW', 'DRAFT', 'THINKING', 'EXECUTING', 'MODIFIED'].includes(s)) return 'info';
+    if (['PAID', 'COMPLETED', 'RESOLVED', 'APPROVED', 'ACTIVE', 'AVAILABLE', 'WON'].includes(s)) return 'success';
+    if (['OPEN', 'REQUEST_APPROVAL', 'WAITING_APPROVAL', 'SENT', 'HIGH', 'PREPARING', 'DEFERRED', 'URGENT', 'IN_PROGRESS'].includes(s)) return 'warning';
+    if (['FAILED', 'REJECTED', 'ERROR', 'CANCELLED', 'LOST', 'INACTIVE'].includes(s)) return 'danger';
+    if (['NEW', 'DRAFT', 'THINKING', 'EXECUTING', 'MODIFIED', 'PROSPECT', 'QUALIFICATION'].includes(s)) return 'info';
     return 'neutral';
   });
 }

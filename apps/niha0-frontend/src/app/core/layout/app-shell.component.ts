@@ -9,10 +9,18 @@ import { SidebarComponent } from './sidebar.component';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { ApprovalNotificationsComponent } from './approval-notifications.component';
 import { BreadcrumbsComponent } from '../../shared/ui/breadcrumbs/breadcrumbs.component';
+import { GlobalSearchComponent } from '../../shared/ui/global-search/global-search.component';
 
 @Component({
   selector: 'app-shell',
-  imports: [SidebarComponent, RouterOutlet, RouterLink, ApprovalNotificationsComponent, BreadcrumbsComponent],
+  imports: [
+    SidebarComponent,
+    RouterOutlet,
+    RouterLink,
+    ApprovalNotificationsComponent,
+    BreadcrumbsComponent,
+    GlobalSearchComponent,
+  ],
   template: `
     <div class="shell" [class.nav-open]="navOpen()">
       @if (navOpen()) {
@@ -56,6 +64,7 @@ import { BreadcrumbsComponent } from '../../shared/ui/breadcrumbs/breadcrumbs.co
             </div>
           </div>
           <div class="topbar-right">
+            <app-global-search />
             <a routerLink="/app/notifications" class="icon-link" title="Notifications" aria-label="Notifications">
               <span aria-hidden="true">◎</span>
             </a>

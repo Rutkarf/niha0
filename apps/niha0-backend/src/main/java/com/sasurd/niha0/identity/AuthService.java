@@ -1,6 +1,7 @@
 package com.sasurd.niha0.identity;
 
 import com.sasurd.niha0.audit.AuditService;
+import com.sasurd.niha0.billing.EntitlementService;
 import com.sasurd.niha0.common.ApiException;
 import com.sasurd.niha0.common.Role;
 import com.sasurd.niha0.identity.dto.AcceptInviteRequest;
@@ -73,6 +74,7 @@ public class AuthService {
     private final MailService mailService;
     private final TotpService totpService;
     private final AuditService auditService;
+    private final EntitlementService entitlementService;
     private final boolean demoLoginEnabled;
 
     public AuthService(UserRepository userRepository,
@@ -87,6 +89,7 @@ public class AuthService {
                        MailService mailService,
                        TotpService totpService,
                        AuditService auditService,
+                       EntitlementService entitlementService,
                        @Value("${niha0.security.demo-login-enabled:true}") boolean demoLoginEnabled) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -100,6 +103,7 @@ public class AuthService {
         this.mailService = mailService;
         this.totpService = totpService;
         this.auditService = auditService;
+        this.entitlementService = entitlementService;
         this.demoLoginEnabled = demoLoginEnabled;
     }
 
@@ -156,6 +160,9 @@ public class AuthService {
         Membership membership = resolveMembership(user.getId(), request.organizationSlug());
         Organization org = organizationRepository.findById(membership.getOrganizationId())
                 .orElseThrow(() -> new ApiException(401, "Organization not found"));
+        if ("SUSPENDED".equalsIgnoreCase(org.getOnboardingStatus())) {
+            throw new ApiException(403, "Organization is suspended");
+        }
 
         if (user.isMfaEnabled()) {
             String mfaToken = jwtService.generateMfaToken(
@@ -187,6 +194,9 @@ public class AuthService {
 
         Organization org = organizationRepository.findById(membership.getOrganizationId())
                 .orElseThrow(() -> new ApiException(401, "Organization not found"));
+        if ("SUSPENDED".equalsIgnoreCase(org.getOnboardingStatus())) {
+            throw new ApiException(403, "Organization is suspended");
+        }
 
         return buildTokenResponse(user, org, membership.getRole());
     }
@@ -306,6 +316,8 @@ public class AuthService {
                 .ifPresent(m -> {
                     throw new ApiException(409, "User is already a member of this organization");
                 });
+
+        entitlementService.assertSeatAvailable(invite.getOrganizationId());
 
         Membership membership = new Membership();
         membership.setOrganizationId(invite.getOrganizationId());

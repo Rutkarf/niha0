@@ -1,5 +1,8 @@
 package com.sasurd.niha0.crm;
 
+import com.sasurd.niha0.crm.dto.CustomerRequest;
+import com.sasurd.niha0.crm.dto.CustomerResponse;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,25 +20,39 @@ public class CrmController {
     }
 
     @GetMapping("/customers")
-    public List<Customer> listCustomers() {
-        return crmService.listCustomers();
+    public List<CustomerResponse> listCustomers() {
+        return crmService.listCustomers().stream().map(CrmController::toCustomerResponse).toList();
     }
 
     @PostMapping("/customers")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','SALES','MEMBER')")
-    public Customer createCustomer(@RequestBody Customer customer) {
-        return crmService.createCustomer(customer);
+    public CustomerResponse createCustomer(@Valid @RequestBody CustomerRequest request) {
+        Customer customer = new Customer();
+        customer.setName(request.name());
+        customer.setEmail(request.email());
+        customer.setPhone(request.phone());
+        customer.setIndustry(request.industry());
+        if (request.status() != null && !request.status().isBlank()) {
+            customer.setStatus(request.status());
+        }
+        return toCustomerResponse(crmService.createCustomer(customer));
     }
 
     @GetMapping("/customers/{id}")
-    public Customer getCustomer(@PathVariable UUID id) {
-        return crmService.getCustomer(id);
+    public CustomerResponse getCustomer(@PathVariable UUID id) {
+        return toCustomerResponse(crmService.getCustomer(id));
     }
 
     @PutMapping("/customers/{id}")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','SALES')")
-    public Customer updateCustomer(@PathVariable UUID id, @RequestBody Customer customer) {
-        return crmService.updateCustomer(id, customer);
+    public CustomerResponse updateCustomer(@PathVariable UUID id, @Valid @RequestBody CustomerRequest request) {
+        Customer update = new Customer();
+        update.setName(request.name());
+        update.setEmail(request.email());
+        update.setPhone(request.phone());
+        update.setIndustry(request.industry());
+        update.setStatus(request.status() == null || request.status().isBlank() ? "ACTIVE" : request.status());
+        return toCustomerResponse(crmService.updateCustomer(id, update));
     }
 
     @DeleteMapping("/customers/{id}")
@@ -110,5 +127,17 @@ public class CrmController {
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','SALES','MEMBER')")
     public Task createTask(@RequestBody Task task) {
         return crmService.createTask(task);
+    }
+
+    private static CustomerResponse toCustomerResponse(Customer customer) {
+        return new CustomerResponse(
+                customer.getId(),
+                customer.getName(),
+                customer.getEmail(),
+                customer.getPhone(),
+                customer.getIndustry(),
+                customer.getStatus(),
+                customer.getCreatedAt(),
+                customer.getUpdatedAt());
     }
 }

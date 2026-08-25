@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -9,6 +9,12 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
 import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
 import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';
+import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
+import { ToastService } from '../../shared/ui/toast/toast.service';
+import {
+  TICKET_PRIORITY_OPTIONS,
+  TICKET_STATUS_OPTIONS,
+} from '../../shared/ui/status-labels';
 import { mapHttpError } from '../../core/api/http-error.util';
 
 @Component({
@@ -21,6 +27,7 @@ import { mapHttpError } from '../../core/api/http-error.util';
     EmptyStateComponent,
     AgentHubCardComponent,
     StatusBadgeComponent,
+    SkeletonComponent,
   ],
   template: `
     <div class="page">
@@ -49,19 +56,17 @@ import { mapHttpError } from '../../core/api/http-error.util';
           <label class="label">
             Priorité
             <select class="input" name="priority" [(ngModel)]="priority">
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-              <option value="URGENT">URGENT</option>
+              @for (opt of priorityOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
             </select>
           </label>
           <label class="label">
             Statut
             <select class="input" name="status" [(ngModel)]="status">
-              <option value="OPEN">OPEN</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="RESOLVED">RESOLVED</option>
-              <option value="CLOSED">CLOSED</option>
+              @for (opt of statusOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
             </select>
           </label>
         </div>
@@ -77,20 +82,31 @@ import { mapHttpError } from '../../core/api/http-error.util';
             <button type="button" class="btn btn-ghost" (click)="cancelEdit()">Annuler</button>
           }
         </div>
-        @if (formError()) {
-          <p class="error" role="alert">{{ formError() }}</p>
-        }
-        @if (formOk()) {
-          <p class="ok" role="status">{{ formOk() }}</p>
-        }
       </form>
 
       <h2 class="section-title">Tickets</h2>
       @if (loadingRows()) {
-        <app-loading-state />
+        <app-skeleton message="Chargement des tickets…" [lines]="5" />
       } @else if (!tickets().length) {
-        <app-empty-state title="Aucun ticket" icon="TKT" />
+        <app-empty-state
+          title="Aucun ticket"
+          icon="TKT"
+          description="Créez un ticket avec le formulaire ci-dessus pour suivre vos demandes support."
+        />
       } @else {
+        <div class="table-toolbar">
+          <label class="search">
+            <span class="sr-only">Filtrer</span>
+            <input
+              class="input"
+              type="search"
+              placeholder="Rechercher un ticket…"
+              [ngModel]="listQuery()"
+              (ngModelChange)="listQuery.set($event)"
+            />
+          </label>
+          <p class="meta">{{ filteredTickets().length }} résultat(s)</p>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -102,14 +118,18 @@ import { mapHttpError } from '../../core/api/http-error.util';
               </tr>
             </thead>
             <tbody>
-              @for (t of tickets(); track t.id) {
+              @for (t of filteredTickets(); track t.id) {
                 <tr>
                   <td>{{ t.subject }}</td>
                   <td><app-status-badge [status]="t.status" /></td>
                   <td><app-status-badge [status]="t.priority" /></td>
                   <td>
-                    <button type="button" class="btn btn-ghost" (click)="edit(t)">Éditer</button>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="edit(t)">Éditer</button>
                   </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="empty-cell">Aucun résultat pour cette recherche</td>
                 </tr>
               }
             </tbody>
@@ -124,28 +144,52 @@ import { mapHttpError } from '../../core/api/http-error.util';
     .label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8rem; }
     .label.block { width: 100%; }
     .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    .error { color: var(--accent-danger); margin: 0; }
-    .ok { color: var(--accent-success, #16a34a); margin: 0; }
-    .table-wrap { overflow-x: auto; }
+    .table-toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 0.75rem; margin-bottom: 0.75rem;
+    }
+    .search { flex: 1; min-width: 180px; max-width: 320px; }
+    .meta { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-elevated); }
     table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
     th, td { text-align: left; padding: 0.55rem 0.4rem; border-bottom: 1px solid var(--border-color); }
+    .empty-cell { text-align: center; color: var(--text-muted); padding: 1.25rem; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+    }
   `],
 })
 export class CustomerRelationsPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
   readonly loadingAgent = signal(true);
   readonly loadingRows = signal(true);
   readonly saving = signal(false);
-  readonly formError = signal('');
-  readonly formOk = signal('');
   readonly agent = signal<Agent | null>(null);
   readonly tickets = signal<Ticket[]>([]);
   readonly editingId = signal<string | null>(null);
+  readonly listQuery = signal('');
+  readonly priorityOptions = TICKET_PRIORITY_OPTIONS;
+  readonly statusOptions = TICKET_STATUS_OPTIONS;
 
   subject = '';
   description = '';
   priority = 'MEDIUM';
   status = 'OPEN';
+
+  readonly filteredTickets = computed(() => {
+    const q = this.listQuery().trim().toLowerCase();
+    const list = this.tickets();
+    if (!q) return list;
+    return list.filter(
+      (t) =>
+        t.subject.toLowerCase().includes(q) ||
+        (t.status ?? '').toLowerCase().includes(q) ||
+        (t.priority ?? '').toLowerCase().includes(q) ||
+        (t.description ?? '').toLowerCase().includes(q),
+    );
+  });
 
   ngOnInit(): void {
     this.api.getAgents().subscribe({
@@ -176,8 +220,6 @@ export class CustomerRelationsPage implements OnInit {
     this.description = t.description ?? '';
     this.priority = t.priority || 'MEDIUM';
     this.status = t.status || 'OPEN';
-    this.formOk.set('');
-    this.formError.set('');
   }
 
   cancelEdit(): void {
@@ -191,8 +233,6 @@ export class CustomerRelationsPage implements OnInit {
   async save(): Promise<void> {
     if (!this.subject.trim()) return;
     this.saving.set(true);
-    this.formError.set('');
-    this.formOk.set('');
     try {
       const id = this.editingId();
       if (id) {
@@ -204,7 +244,7 @@ export class CustomerRelationsPage implements OnInit {
             status: this.status,
           }),
         );
-        this.formOk.set('Ticket mis à jour.');
+        this.toast.success('Ticket mis à jour.');
       } else {
         await firstValueFrom(
           this.api.createTicket({
@@ -214,12 +254,12 @@ export class CustomerRelationsPage implements OnInit {
             status: this.status,
           }),
         );
-        this.formOk.set('Ticket créé.');
+        this.toast.success('Ticket créé.');
       }
       this.cancelEdit();
       await this.reload();
     } catch (err) {
-      this.formError.set(mapHttpError(err, 'Enregistrement impossible'));
+      this.toast.error(mapHttpError(err, 'Enregistrement impossible'));
     } finally {
       this.saving.set(false);
     }

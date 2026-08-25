@@ -8,6 +8,10 @@ describe('BillingPlan Settings contract', () => {
       seatsUsed: 1,
       seatsLimit: 3,
       storageNote: 'Plan local stub',
+      storageUsedBytes: 0,
+      storageLimitBytes: 100 * 1024 * 1024,
+      aiActionsUsedToday: 0,
+      aiActionsLimitDaily: 20,
     });
     expect(plan).not.toHaveProperty('agentQuota');
     expect(plan).not.toHaveProperty('seats');

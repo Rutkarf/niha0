@@ -16,6 +16,8 @@ import { Role } from '../../core/auth/auth.models';
 import { LocaleService, AppLocale } from '../../core/i18n/locale.service';
 import { mapHttpError } from '../../core/api/http-error.util';
 import { LoadingStateComponent } from '../../shared/ui/loading-state/loading-state.component';
+import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 
 const CHECKOUT_REF_KEY = 'niha0_checkout_ref';
 const PAID_CHECKOUT_STATUSES = new Set(['PAID', 'COMPLETED', 'SUCCESS', 'SUCCESSFUL']);
@@ -306,6 +308,8 @@ export class SettingsPage implements OnInit {
   readonly auth = inject(AuthService);
   readonly theme = inject(ThemeService);
   readonly locale = inject(LocaleService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly toast = inject(ToastService);
 
   readonly loading = signal(true);
   readonly loadingMembers = signal(false);
@@ -455,13 +459,21 @@ export class SettingsPage implements OnInit {
   }
 
   async deactivate(m: MembershipMember): Promise<void> {
-    if (!confirm(`Désactiver ${m.email} ?`)) return;
+    const ok = await this.confirmDialog.confirm({
+      title: 'Désactiver le membre',
+      message: `Désactiver ${m.email} ? Il ne pourra plus se connecter.`,
+      confirmLabel: 'Désactiver',
+      danger: true,
+    });
+    if (!ok) return;
     this.memberBusy.set(m.id);
     try {
       await firstValueFrom(this.api.updateMember(m.id, { role: m.role, active: false }));
       await this.loadMembersAndInvites();
+      this.toast.success('Membre désactivé.');
     } catch (err) {
       this.memberMsg.set(mapHttpError(err, 'Désactivation impossible'));
+      this.toast.error(mapHttpError(err, 'Désactivation impossible'));
     } finally {
       this.memberBusy.set(null);
     }
@@ -537,14 +549,22 @@ export class SettingsPage implements OnInit {
   }
 
   async eraseAccount(): Promise<void> {
-    if (!confirm('Cette action est irréversible. Effacer votre compte et vos données personnelles ?')) return;
+    const ok = await this.confirmDialog.confirm({
+      title: 'Effacer le compte',
+      message: 'Cette action est irréversible. Effacer votre compte et vos données personnelles ?',
+      confirmLabel: 'Effacer définitivement',
+      danger: true,
+    });
+    if (!ok) return;
     this.privacyBusy.set(true);
     try {
       await firstValueFrom(this.api.eraseMe());
       this.privacyMsg.set('Demande enregistrée. Déconnexion…');
+      this.toast.success('Compte effacé. Déconnexion…');
       this.auth.logout();
     } catch (err) {
       this.privacyMsg.set(mapHttpError(err, 'Effacement impossible'));
+      this.toast.error(mapHttpError(err, 'Effacement impossible'));
     } finally {
       this.privacyBusy.set(false);
     }

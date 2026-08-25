@@ -220,14 +220,17 @@ export interface Payment extends EntityBase {
 export type BillingPlanTier = 'FREE' | 'PRO' | 'BUSINESS';
 
 /**
- * Billing plan DTO — must match backend `BillingPlanResponse`
- * (plan, seatsUsed, seatsLimit, storageNote).
+ * Billing plan DTO — must match backend `BillingPlanResponse`.
  */
 export interface BillingPlan {
   plan: BillingPlanTier;
   seatsUsed: number;
   seatsLimit: number;
   storageNote: string;
+  storageUsedBytes?: number;
+  storageLimitBytes?: number;
+  aiActionsUsedToday?: number;
+  aiActionsLimitDaily?: number;
 }
 
 /** Safe FREE stub when `/billing/plan` is unavailable (Settings fallback). */
@@ -237,6 +240,10 @@ export function defaultBillingPlan(overrides: Partial<BillingPlan> = {}): Billin
     seatsUsed: 1,
     seatsLimit: 3,
     storageNote: 'Plan local stub',
+    storageUsedBytes: 0,
+    storageLimitBytes: 100 * 1024 * 1024,
+    aiActionsUsedToday: 0,
+    aiActionsLimitDaily: 20,
     ...overrides,
   };
 }

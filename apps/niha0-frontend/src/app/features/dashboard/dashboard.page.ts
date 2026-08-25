@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { DashboardKpis } from '../../core/api/api.models';
@@ -7,6 +7,8 @@ import { LoadingStateComponent } from '../../shared/ui/loading-state/loading-sta
 import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
 import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
 import { TenancyService } from '../../core/tenancy/tenancy.service';
+
+type PeriodKey = 'today' | '7d' | '30d';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -27,6 +29,22 @@ import { TenancyService } from '../../core/tenancy/tenancy.service';
         }
       </header>
 
+      <div class="period-bar" role="group" aria-label="Période d’affichage">
+        <span class="period-note">Période :</span>
+        @for (p of periods; track p.key) {
+          <button
+            type="button"
+            class="period-chip"
+            [class.active]="period() === p.key"
+            [attr.aria-pressed]="period() === p.key"
+            (click)="period.set(p.key)"
+          >
+            {{ p.label }}
+          </button>
+        }
+        <span class="period-hint">{{ periodLabel() }} — affichage indicatif (données globales)</span>
+      </div>
+
       <nav class="quick-nav" aria-label="Accès rapide">
         @for (link of quickLinks; track link.route) {
           <a [routerLink]="link.route" class="quick-link">
@@ -41,7 +59,7 @@ import { TenancyService } from '../../core/tenancy/tenancy.service';
       } @else if (!kpis()) {
         <app-empty-state
           title="KPIs indisponibles"
-          description="Impossible de charger les indicateurs. Vérifiez que le backend est démarré."
+          description="Impossible de charger les indicateurs. Vérifiez que le backend est démarré, puis réessayez."
           icon="KPI"
         />
       } @else {
@@ -73,6 +91,43 @@ import { TenancyService } from '../../core/tenancy/tenancy.service';
       align-self: center;
     }
     .approve-cta:hover { text-decoration: none; filter: brightness(1.05); }
+    .period-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.55rem;
+      margin: 0 0 1rem;
+    }
+    .period-note {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .period-chip {
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.65rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color var(--transition), color var(--transition), background var(--transition);
+    }
+    .period-chip:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+    .period-chip.active {
+      border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+      background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+      color: var(--accent-primary);
+    }
+    .period-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-left: 0.25rem;
+    }
     .quick-nav {
       display: flex;
       flex-wrap: wrap;
@@ -113,6 +168,24 @@ export class DashboardPage implements OnInit {
   readonly tenancy = inject(TenancyService);
   readonly loading = signal(true);
   readonly kpis = signal<DashboardKpis | null>(null);
+  readonly period = signal<PeriodKey>('7d');
+
+  readonly periods: { key: PeriodKey; label: string }[] = [
+    { key: 'today', label: "Aujourd'hui" },
+    { key: '7d', label: '7j' },
+    { key: '30d', label: '30j' },
+  ];
+
+  readonly periodLabel = computed(() => {
+    switch (this.period()) {
+      case 'today':
+        return "Aujourd'hui";
+      case '7d':
+        return '7 derniers jours';
+      case '30d':
+        return '30 derniers jours';
+    }
+  });
 
   readonly quickLinks = [
     { code: 'CRM', label: 'CRM', route: '/app/crm' },

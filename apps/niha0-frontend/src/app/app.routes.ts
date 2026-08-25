@@ -4,7 +4,16 @@ import { onboardingGuard } from './core/guards/onboarding.guard';
 import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'app/ai-office', pathMatch: 'full' },
+  {
+    path: '',
+    loadComponent: () =>
+      import('./features/marketing-site/landing.page').then((m) => m.LandingPage),
+  },
+  {
+    path: 'pricing',
+    loadComponent: () =>
+      import('./features/marketing-site/pricing.page').then((m) => m.PricingPage),
+  },
   {
     path: 'login',
     canActivate: [guestGuard],
@@ -203,6 +212,19 @@ export const routes: Routes = [
         canActivate: [onboardingGuard, roleGuard],
         data: { roles: ['ADMIN'] },
         loadComponent: () => import('./features/audit/audit.page').then((m) => m.AuditPage),
+      },
+      {
+        path: 'access-denied',
+        canActivate: [onboardingGuard],
+        loadComponent: () =>
+          import('./features/access-denied/access-denied.page').then((m) => m.AccessDeniedPage),
+      },
+      {
+        path: 'platform',
+        canActivate: [onboardingGuard, roleGuard],
+        data: { roles: ['PLATFORM_ADMIN'], strictRoles: true },
+        loadComponent: () =>
+          import('./features/platform/platform-admin.page').then((m) => m.PlatformAdminPage),
       },
       {
         path: 'settings',

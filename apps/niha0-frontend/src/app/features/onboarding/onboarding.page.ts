@@ -24,13 +24,28 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
         <span class="soon-pill">Étape {{ step() + 1 }} / 4</span>
       </header>
 
-      <nav class="steps" aria-label="Étapes">
+      <nav class="steps" aria-label="Étapes d’onboarding">
         @for (label of stepLabels; track label; let i = $index) {
-          <button type="button" class="step" [class.active]="step() === i" [class.done]="step() > i" (click)="go(i)">
-            {{ i + 1 }}. {{ label }}
+          <button
+            type="button"
+            class="step"
+            [class.active]="step() === i"
+            [class.done]="step() > i"
+            [attr.aria-current]="step() === i ? 'step' : null"
+            (click)="go(i)"
+          >
+            <span class="step-num" aria-hidden="true">{{ i + 1 }}</span>
+            {{ label }}
           </button>
         }
       </nav>
+      <div class="step-bar" aria-hidden="true">
+        <div class="step-fill" [style.width.%]="((step() + 1) / 4) * 100"></div>
+      </div>
+
+      @if (stepError()) {
+        <p class="error banner" role="alert">{{ stepError() }}</p>
+      }
 
       @if (step() === 0) {
         <section class="card panel" aria-labelledby="co-title">
@@ -200,7 +215,7 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
   `,
   styles: [`
     .onboarding { max-width: 920px; }
-    .steps { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+    .steps { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.55rem; }
     .step {
       border: 1px solid var(--border-color);
       background: var(--bg-elevated);
@@ -211,9 +226,45 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
       font-weight: 650;
       cursor: pointer;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .step-num {
+      width: 1.1rem;
+      height: 1.1rem;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 0.62rem;
+      background: var(--bg-hover);
+      color: var(--text-muted);
     }
     .step.active { color: var(--accent-primary); border-color: var(--border-strong); }
-    .step.done { opacity: 0.85; }
+    .step.active .step-num { background: var(--accent-primary); color: var(--on-accent); }
+    .step.done { opacity: 0.9; }
+    .step.done .step-num { background: color-mix(in srgb, var(--accent-success) 35%, var(--bg-elevated)); color: var(--accent-success); }
+    .step-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border-color);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .step-fill {
+      height: 100%;
+      background: var(--accent-primary);
+      transition: width var(--transition);
+    }
+    .error.banner {
+      color: var(--accent-danger);
+      background: color-mix(in srgb, var(--accent-danger) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);
+      border-radius: var(--radius-sm);
+      padding: 0.55rem 0.75rem;
+      margin: 0 0 1rem;
+      font-size: 0.85rem;
+    }
     .panel { padding: 1.25rem; margin-bottom: 1rem; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem; margin-top: 1rem; }
@@ -241,7 +292,7 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
     .swatches i { width: 10px; height: 10px; border-radius: 2px; display: block; }
     .preview-swatch {
       margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md);
-      color: #041018; font-weight: 700; text-align: center;
+      color: var(--on-accent); font-weight: 700; text-align: center;
     }
     .summary { display: grid; gap: 0.55rem; }
     .summary div { display: flex; gap: 0.75rem; }
@@ -250,6 +301,9 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
     .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
     @media (max-width: 720px) {
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .step-fill { transition: none; }
     }
   `],
 })
@@ -260,6 +314,7 @@ export class OnboardingPage implements OnInit {
   readonly step = signal(0);
   readonly logoError = signal('');
   readonly saveError = signal('');
+  readonly stepError = signal('');
   readonly stepLabels = ['Entreprise', 'Logo', 'Bureau 3D', 'Confirmation'];
   readonly sizes = COMPANY_SIZES;
   readonly presets = THEME_PRESETS;
@@ -282,9 +337,10 @@ export class OnboardingPage implements OnInit {
 
   next(): void {
     if (this.step() === 0 && !this.ws.profile().companyName.trim()) {
-      this.saveError.set('Le nom de l’entreprise est obligatoire.');
+      this.stepError.set('Le nom de l’entreprise est obligatoire pour continuer.');
       return;
     }
+    this.stepError.set('');
     this.saveError.set('');
     this.go(Math.min(3, this.step() + 1));
   }

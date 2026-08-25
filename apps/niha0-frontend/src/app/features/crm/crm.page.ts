@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
@@ -8,6 +8,10 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
 import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
 import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';
+import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
+import { ToastService } from '../../shared/ui/toast/toast.service';
+import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
+import { CUSTOMER_STATUS_OPTIONS } from '../../shared/ui/status-labels';
 import { TenancyService } from '../../core/tenancy/tenancy.service';
 import { mapHttpError } from '../../core/api/http-error.util';
 
@@ -20,6 +24,7 @@ import { mapHttpError } from '../../core/api/http-error.util';
     AgentOfficeLinkComponent,
     AgentHubCardComponent,
     StatusBadgeComponent,
+    SkeletonComponent,
     RouterLink,
   ],
   template: `
@@ -57,9 +62,9 @@ import { mapHttpError } from '../../core/api/http-error.util';
           <label class="label">
             Statut
             <select class="input" name="status" [(ngModel)]="status">
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
-              <option value="PROSPECT">PROSPECT</option>
+              @for (opt of statusOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
             </select>
           </label>
           <button type="submit" class="btn btn-primary" [disabled]="saving() || !name.trim()">
@@ -69,20 +74,31 @@ import { mapHttpError } from '../../core/api/http-error.util';
             <button type="button" class="btn btn-ghost" (click)="cancelEdit()">Annuler</button>
           }
         </div>
-        @if (formError()) {
-          <p class="error" role="alert">{{ formError() }}</p>
-        }
-        @if (formOk()) {
-          <p class="ok" role="status">{{ formOk() }}</p>
-        }
       </form>
 
       <h2 class="section-title">Clients</h2>
       @if (loading()) {
-        <app-loading-state />
+        <app-skeleton message="Chargement des clients…" [lines]="5" />
       } @else if (!customers().length) {
-        <app-empty-state title="Aucun client" icon="CRM" />
+        <app-empty-state
+          title="Aucun client"
+          icon="CRM"
+          description="Ajoutez votre premier client avec le formulaire ci-dessus pour démarrer le CRM."
+        />
       } @else {
+        <div class="table-toolbar">
+          <label class="search">
+            <span class="sr-only">Filtrer</span>
+            <input
+              class="input"
+              type="search"
+              placeholder="Rechercher un client…"
+              [ngModel]="listQuery()"
+              (ngModelChange)="listQuery.set($event)"
+            />
+          </label>
+          <p class="meta">{{ filteredCustomers().length }} résultat(s)</p>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -95,7 +111,7 @@ import { mapHttpError } from '../../core/api/http-error.util';
               </tr>
             </thead>
             <tbody>
-              @for (c of customers(); track c.id) {
+              @for (c of filteredCustomers(); track c.id) {
                 <tr>
                   <td>{{ c.name }}</td>
                   <td>{{ c.email }}</td>
@@ -105,6 +121,10 @@ import { mapHttpError } from '../../core/api/http-error.util';
                     <button type="button" class="btn btn-ghost btn-sm" (click)="edit(c)">Éditer</button>
                     <button type="button" class="btn btn-danger btn-sm" (click)="remove(c)">Suppr.</button>
                   </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty-cell">Aucun résultat pour cette recherche</td>
                 </tr>
               }
             </tbody>
@@ -119,8 +139,12 @@ import { mapHttpError } from '../../core/api/http-error.util';
     .row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
     .label { margin-bottom: 0; min-width: 140px; flex: 1; }
     .btn-primary { align-self: flex-end; min-height: 2.4rem; }
-    .error { color: var(--accent-danger); font-size: 0.8rem; margin: 0.65rem 0 0; }
-    .ok { color: var(--accent-success); font-size: 0.8rem; margin: 0.65rem 0 0; }
+    .table-toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 0.75rem; margin-bottom: 0.75rem;
+    }
+    .search { flex: 1; min-width: 180px; max-width: 320px; }
+    .meta { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
     .table-wrap {
       overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);
       background: var(--bg-elevated);
@@ -131,24 +155,43 @@ import { mapHttpError } from '../../core/api/http-error.util';
       font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);
     }
     .actions { display: flex; gap: 0.35rem; white-space: nowrap; }
-    .btn-sm { font-size: 0.72rem; padding: 0.25rem 0.5rem; min-height: auto; }
+    .empty-cell { text-align: center; color: var(--text-muted); padding: 1.25rem; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+    }
   `],
 })
 export class CrmPage implements OnInit {
   readonly tenancy = inject(TenancyService);
   private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   readonly loading = signal(true);
   readonly loadingAgent = signal(true);
   readonly saving = signal(false);
-  readonly formError = signal('');
-  readonly formOk = signal('');
   readonly agent = signal<Agent | null>(null);
   readonly customers = signal<Customer[]>([]);
   readonly editingId = signal<string | null>(null);
+  readonly listQuery = signal('');
+  readonly statusOptions = CUSTOMER_STATUS_OPTIONS;
   name = '';
   email = '';
   industry = '';
   status = 'ACTIVE';
+
+  readonly filteredCustomers = computed(() => {
+    const q = this.listQuery().trim().toLowerCase();
+    const list = this.customers();
+    if (!q) return list;
+    return list.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.email ?? '').toLowerCase().includes(q) ||
+        (c.industry ?? '').toLowerCase().includes(q) ||
+        (c.status ?? '').toLowerCase().includes(q),
+    );
+  });
 
   ngOnInit(): void {
     this.api.getAgents().subscribe({
@@ -167,8 +210,6 @@ export class CrmPage implements OnInit {
     this.email = c.email ?? '';
     this.industry = c.industry ?? '';
     this.status = c.status || 'ACTIVE';
-    this.formOk.set('');
-    this.formError.set('');
   }
 
   cancelEdit(): void {
@@ -180,8 +221,6 @@ export class CrmPage implements OnInit {
   }
 
   save(): void {
-    this.formError.set('');
-    this.formOk.set('');
     if (!this.name.trim()) return;
     this.saving.set(true);
     const body = {
@@ -197,22 +236,31 @@ export class CrmPage implements OnInit {
     req.subscribe({
       next: () => {
         this.saving.set(false);
-        this.formOk.set(id ? 'Client mis à jour.' : 'Client créé.');
+        this.toast.success(id ? 'Client mis à jour.' : 'Client créé.');
         this.cancelEdit();
         this.reload();
       },
       error: (err) => {
         this.saving.set(false);
-        this.formError.set(mapHttpError(err, 'Enregistrement impossible.'));
+        this.toast.error(mapHttpError(err, 'Enregistrement impossible.'));
       },
     });
   }
 
-  remove(c: Customer): void {
-    if (!confirm(`Supprimer ${c.name} ?`)) return;
+  async remove(c: Customer): Promise<void> {
+    const ok = await this.confirmDialog.confirm({
+      title: 'Supprimer le client',
+      message: `Voulez-vous supprimer « ${c.name} » ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     this.api.deleteCustomer(c.id).subscribe({
-      next: () => this.reload(),
-      error: (err) => this.formError.set(mapHttpError(err, 'Suppression impossible.')),
+      next: () => {
+        this.toast.success('Client supprimé.');
+        this.reload();
+      },
+      error: (err) => this.toast.error(mapHttpError(err, 'Suppression impossible.')),
     });
   }
 

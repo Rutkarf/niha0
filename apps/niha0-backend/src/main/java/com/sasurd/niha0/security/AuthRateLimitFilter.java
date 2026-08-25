@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpMethod;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -15,10 +17,11 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
- * In-memory rate limiter for sensitive auth endpoints (brute-force / stuffing).
- * Limits are per client IP; not distributed — use Redis gateway in multi-instance prod.
+ * Rate limiter for sensitive auth endpoints.
+ * Uses Redis when {@link StringRedisTemplate} is available; otherwise in-memory.
  */
 @Component
 public class AuthRateLimitFilter extends OncePerRequestFilter {
@@ -38,6 +41,11 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     );
 
     private final ConcurrentHashMap<String, Deque<Long>> attempts = new ConcurrentHashMap<>();
+    private final ObjectProvider<StringRedisTemplate> redisTemplate;
+
+    public AuthRateLimitFilter(ObjectProvider<StringRedisTemplate> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -62,18 +70,38 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI() == null ? "" : request.getRequestURI();
         int max = path.contains("/mfa/") ? MAX_MFA_ATTEMPTS : MAX_ATTEMPTS;
-        String key = clientKey(request) + "|" + bucket(path);
+        String key = "niha0:auth-rl:" + clientKey(request) + "|" + bucket(path);
+
+        if (!tryAcquire(key, max)) {
+            response.sendError(429, "Too many authentication attempts. Try again later.");
+            return;
+        }
+        filterChain.doFilter(request, response);
+    }
+
+    private boolean tryAcquire(String key, int max) {
+        StringRedisTemplate redis = redisTemplate.getIfAvailable();
+        if (redis != null) {
+            try {
+                Long count = redis.opsForValue().increment(key);
+                if (count != null && count == 1L) {
+                    redis.expire(key, WINDOW.toSeconds(), TimeUnit.SECONDS);
+                }
+                return count == null || count <= max;
+            } catch (Exception ignored) {
+                // Fall back to memory if Redis is misconfigured
+            }
+        }
         long now = System.currentTimeMillis();
         Deque<Long> window = attempts.computeIfAbsent(key, k -> new ArrayDeque<>());
         synchronized (window) {
             prune(window, now);
             if (window.size() >= max) {
-                response.sendError(429, "Too many authentication attempts. Try again later.");
-                return;
+                return false;
             }
             window.addLast(now);
+            return true;
         }
-        filterChain.doFilter(request, response);
     }
 
     private static String bucket(String path) {

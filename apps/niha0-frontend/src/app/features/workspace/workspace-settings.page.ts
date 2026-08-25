@@ -16,6 +16,8 @@ import type {
   AgentConfiguration,
   AssistantConfiguration,
 } from '../../core/workspace/professional.models';
+import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 
 type TabId = 'identity' | 'office' | 'agents' | 'assistants' | 'data' | 'appearance' | 'accessibility';
 
@@ -308,6 +310,8 @@ type TabId = 'identity' | 'office' | 'agents' | 'assistants' | 'data' | 'appeara
 export class WorkspaceSettingsPage implements OnInit {
   readonly ws = inject(ProfessionalWorkspaceService);
   private readonly api = inject(ApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly toast = inject(ToastService);
 
   readonly tab = signal<TabId>('identity');
   readonly message = signal('');
@@ -373,16 +377,24 @@ export class WorkspaceSettingsPage implements OnInit {
     try {
       await this.ws.saveAll(this.ws.profile().onboardingStatus === 'COMPLETED');
       this.message.set('Personnalisation sauvegardée.');
+      this.toast.success('Personnalisation sauvegardée.');
     } catch (err) {
       this.message.set(mapHttpError(err, 'Échec de sauvegarde.'));
+      this.toast.error(mapHttpError(err, 'Échec de sauvegarde.'));
     }
   }
 
-  confirmReset(): void {
-    if (confirm('Réinitialiser toute la personnalisation ?')) {
-      this.ws.resetCustomization();
-      this.message.set('Personnalisation réinitialisée (non sauvegardée).');
-    }
+  async confirmReset(): Promise<void> {
+    const ok = await this.confirmDialog.confirm({
+      title: 'Réinitialiser',
+      message: 'Réinitialiser toute la personnalisation ? Les changements non sauvegardés seront perdus.',
+      confirmLabel: 'Réinitialiser',
+      danger: true,
+    });
+    if (!ok) return;
+    this.ws.resetCustomization();
+    this.message.set('Personnalisation réinitialisée (non sauvegardée).');
+    this.toast.warning('Personnalisation réinitialisée — pensez à sauvegarder.');
   }
 
   seedAgentsFromApi(): void {

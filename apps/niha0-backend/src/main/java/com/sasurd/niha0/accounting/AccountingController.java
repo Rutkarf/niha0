@@ -1,5 +1,8 @@
 package com.sasurd.niha0.accounting;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +30,12 @@ public class AccountingController {
         return accountingService.createQuote(quote);
     }
 
+    @PostMapping("/quotes/{id}/convert-to-invoice")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','ACCOUNTANT')")
+    public Invoice convertQuoteToInvoice(@PathVariable UUID id) {
+        return accountingService.convertQuoteToInvoice(id);
+    }
+
     @GetMapping("/invoices")
     public List<Invoice> listInvoices() {
         return accountingService.listInvoices();
@@ -41,6 +50,16 @@ public class AccountingController {
     @GetMapping("/invoices/{id}")
     public Invoice getInvoice(@PathVariable UUID id) {
         return accountingService.getInvoice(id);
+    }
+
+    @GetMapping("/invoices/{id}/pdf")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','ACCOUNTANT','MANAGER')")
+    public ResponseEntity<byte[]> invoicePdf(@PathVariable UUID id) {
+        byte[] pdf = accountingService.invoicePdf(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"invoice-" + id + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     @GetMapping("/payments")

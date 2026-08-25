@@ -8,6 +8,8 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
 import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
 import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';
+import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 import { mapHttpError } from '../../core/api/http-error.util';
 
 @Component({
@@ -58,7 +60,11 @@ import { mapHttpError } from '../../core/api/http-error.util';
       @if (loading()) {
         <app-loading-state />
       } @else if (!items().length) {
-        <app-empty-state title="Aucun article" icon="ST" />
+        <app-empty-state
+          title="Aucun article en stock"
+          icon="ST"
+          description="Créez un article via le formulaire ci-dessus pour suivre quantités, seuils de réapprovisionnement et emplacements."
+        />
       } @else {
         <div class="table-wrap">
           <table>
@@ -103,6 +109,8 @@ import { mapHttpError } from '../../core/api/http-error.util';
 })
 export class WmsPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly toast = inject(ToastService);
   readonly loadingAgent = signal(true);
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -143,27 +151,54 @@ export class WmsPage implements OnInit {
         this.sku = this.name = this.location = '';
         this.quantity = 0;
         this.reorderLevel = 10;
+        this.toast.success('Article ajouté à l’inventaire');
         this.reload();
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(mapHttpError(err));
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
       },
     });
   }
 
   adjust(item: StockItem, movementType: string, quantity: number): void {
     this.api.adjustStock(item.id, { movementType, quantity }).subscribe({
-      next: () => this.reload(),
-      error: (err) => this.error.set(mapHttpError(err)),
+      next: () => {
+        this.toast.success(
+          movementType === 'PURCHASE'
+            ? `Stock ${item.sku} augmenté (+${quantity})`
+            : `Stock ${item.sku} diminué (−${quantity})`,
+        );
+        this.reload();
+      },
+      error: (err) => {
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
+      },
     });
   }
 
-  remove(item: StockItem): void {
-    if (!confirm(`Supprimer ${item.sku} ?`)) return;
+  async remove(item: StockItem): Promise<void> {
+    const ok = await this.confirmDialog.confirm({
+      title: 'Supprimer l’article',
+      message: `Supprimer l’article ${item.sku} (${item.name}) ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     this.api.deleteStockItem(item.id).subscribe({
-      next: () => this.reload(),
-      error: (err) => this.error.set(mapHttpError(err)),
+      next: () => {
+        this.toast.success('Article supprimé');
+        this.reload();
+      },
+      error: (err) => {
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
+      },
     });
   }
 

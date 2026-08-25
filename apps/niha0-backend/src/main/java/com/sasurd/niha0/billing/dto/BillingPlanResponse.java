@@ -4,5 +4,9 @@ public record BillingPlanResponse(
         String plan,
         int seatsUsed,
         int seatsLimit,
-        String storageNote
+        String storageNote,
+        long storageUsedBytes,
+        long storageLimitBytes,
+        int aiActionsUsedToday,
+        int aiActionsLimitDaily
 ) {}

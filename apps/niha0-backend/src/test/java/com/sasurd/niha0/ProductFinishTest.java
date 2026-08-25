@@ -221,6 +221,9 @@ class ProductFinishTest {
         assertThat(body.get("plan").asText()).isEqualTo("FREE");
         assertThat(body.get("seatsUsed").asInt()).isGreaterThanOrEqualTo(1);
         assertThat(body.get("seatsLimit").asInt()).isEqualTo(3);
+        assertThat(body.get("storageLimitBytes").asLong()).isGreaterThan(0);
+        assertThat(body.get("aiActionsLimitDaily").asInt()).isEqualTo(20);
+        assertThat(body.get("storageNote").asText()).contains("Stockage");
     }
 
     @Test

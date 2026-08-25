@@ -1,4 +1,4 @@
-.PHONY: help dev prod up down build test lint check backend-test frontend-test frontend-build backend-build backend-run frontend-run
+.PHONY: help dev prod up down build test lint check backend-test frontend-test frontend-build backend-build backend-run frontend-run backup restore-dry compose-config smoke-health
 
 help:
 	@echo "NIHAO — commandes disponibles"
@@ -9,6 +9,10 @@ help:
 	@echo "  make lint           Typecheck frontend (tsc --noEmit)"
 	@echo "  make test           Tests frontend + backend"
 	@echo "  make check          lint + test + build"
+	@echo "  make backup         Dump Postgres (scripts/backup-postgres.sh)"
+	@echo "  make restore-dry    Dry-run restore (DUMP=path.dump)"
+	@echo "  make compose-config Valider docker-compose.yml avec secrets CI"
+	@echo "  make smoke-health   GET /api/actuator/health"
 	@echo "  make backend-run    Lancer le backend (PostgreSQL requis)"
 	@echo "  make frontend-run   Lancer le frontend (ng serve)"
 
@@ -51,3 +55,24 @@ backend-run:
 
 frontend-run:
 	cd apps/niha0-frontend && npm start
+
+backup:
+	./scripts/backup-postgres.sh
+
+restore-dry:
+	@test -n "$(DUMP)" || (echo "Usage: make restore-dry DUMP=backups/postgres/niha0-….dump" >&2; exit 1)
+	DRY_RUN=1 ./scripts/restore-postgres.sh "$(DUMP)"
+
+compose-config:
+	JWT_SECRET='ci-test-secret-at-least-forty-eight-characters-long!!' \
+	POSTGRES_PASSWORD='ci-strong-db-password' \
+	CORS_ORIGINS='https://staging.example.com' \
+	APP_PUBLIC_URL='https://staging.example.com' \
+	STORAGE_S3_ACCESS_KEY='ci' STORAGE_S3_SECRET_KEY='ci-secret-key' \
+	AI_PROVIDER=openai AI_OPENAI_ALLOW_DEMO_FALLBACK=false \
+	MAIL_MODE=smtp BILLING_PROVIDER=stub \
+	$(COMPOSE) compose -f docker-compose.yml config >/dev/null
+	@echo "compose config OK"
+
+smoke-health:
+	curl -fsS http://127.0.0.1:8080/api/actuator/health

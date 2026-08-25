@@ -12,7 +12,14 @@ type DictKey =
   | 'email'
   | 'password'
   | 'forgotPassword'
-  | 'language';
+  | 'language'
+  | 'pricing'
+  | 'getStarted'
+  | 'dashboard'
+  | 'accessDenied'
+  | 'platformAdmin'
+  | 'invoicePdf'
+  | 'signInCta';
 
 const DICT: Record<AppLocale, Record<DictKey, string>> = {
   fr: {
@@ -26,6 +33,13 @@ const DICT: Record<AppLocale, Record<DictKey, string>> = {
     password: 'Mot de passe',
     forgotPassword: 'Mot de passe oublié ?',
     language: 'Langue',
+    pricing: 'Tarifs',
+    getStarted: 'Créer mon espace',
+    dashboard: 'Tableau de bord',
+    accessDenied: 'Accès refusé',
+    platformAdmin: 'Console plateforme',
+    invoicePdf: 'Télécharger le PDF',
+    signInCta: 'Se connecter',
   },
   en: {
     login: 'Sign in',
@@ -38,6 +52,13 @@ const DICT: Record<AppLocale, Record<DictKey, string>> = {
     password: 'Password',
     forgotPassword: 'Forgot password?',
     language: 'Language',
+    pricing: 'Pricing',
+    getStarted: 'Create workspace',
+    dashboard: 'Dashboard',
+    accessDenied: 'Access denied',
+    platformAdmin: 'Platform console',
+    invoicePdf: 'Download PDF',
+    signInCta: 'Sign in',
   },
 };
 

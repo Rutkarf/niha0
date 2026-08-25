@@ -20,9 +20,18 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
       @if (loading()) {
         <app-loading-state message="Chargement du journal…" />
       } @else if (!rows().length) {
-        <app-empty-state title="Aucun log" icon="AUD" description="Aucune entrée d’audit pour cette organisation." />
+        <app-empty-state
+          title="Aucun événement d’audit"
+          icon="AUD"
+          description="Le journal enregistrera les actions significatives (création, modification, suppression) de cette organisation."
+        />
       } @else {
-        <app-data-table [columns]="columns" [rows]="rows()" />
+        <app-data-table
+          [columns]="columns"
+          [rows]="rows()"
+          [filterable]="true"
+          filterPlaceholder="Filtrer par action, entité, date…"
+        />
       }
     </div>
   `,

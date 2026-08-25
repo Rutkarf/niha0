@@ -517,4 +517,50 @@ export class ApiService {
   disableMfa(password: string): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.base}/auth/mfa/disable`, { password });
   }
+
+  getPlatformOrganizations(): Observable<
+    Array<{
+      id: string;
+      name: string;
+      slug: string;
+      billingPlan: string;
+      status: string;
+      activeSeats: number;
+      storageBytes: number;
+    }>
+  > {
+    return this.http.get<
+      Array<{
+        id: string;
+        name: string;
+        slug: string;
+        billingPlan: string;
+        status: string;
+        activeSeats: number;
+        storageBytes: number;
+      }>
+    >(`${this.base}/platform/organizations`);
+  }
+
+  getPlatformHealthSummary(): Observable<{ organizationCount: number; suspendedCount: number }> {
+    return this.http.get<{ organizationCount: number; suspendedCount: number }>(
+      `${this.base}/platform/health-summary`,
+    );
+  }
+
+  suspendPlatformOrg(id: string): Observable<unknown> {
+    return this.http.post(`${this.base}/platform/organizations/${id}/suspend`, {});
+  }
+
+  unsuspendPlatformOrg(id: string): Observable<unknown> {
+    return this.http.post(`${this.base}/platform/organizations/${id}/unsuspend`, {});
+  }
+
+  downloadInvoicePdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.base}/accounting/invoices/${id}/pdf`, { responseType: 'blob' });
+  }
+
+  convertQuoteToInvoice(quoteId: string): Observable<Invoice> {
+    return this.http.post<Invoice>(`${this.base}/accounting/quotes/${quoteId}/convert-to-invoice`, {});
+  }
 }

@@ -41,7 +41,7 @@ describe('roleGuard', () => {
       loadMe: async () => viewer,
     };
     TestBed.configureTestingModule({
-      providers: [provideRouter([{ path: 'app/ai-office', children: [] }]), { provide: AuthService, useValue: auth }],
+      providers: [provideRouter([{ path: 'app/access-denied', children: [] }]), { provide: AuthService, useValue: auth }],
     });
     const result = await TestBed.runInInjectionContext(() =>
       roleGuard(
@@ -49,6 +49,24 @@ describe('roleGuard', () => {
         { url: '/app/audit' } as never,
       ),
     );
-    expect(String(result)).toContain('ai-office');
+    expect(String(result)).toContain('access-denied');
+  });
+
+  it('blocks OWNER on strict PLATFORM_ADMIN routes', async () => {
+    const auth = {
+      isAuthenticated: () => true,
+      user: () => owner,
+      loadMe: async () => owner,
+    };
+    TestBed.configureTestingModule({
+      providers: [provideRouter([{ path: 'app/access-denied', children: [] }]), { provide: AuthService, useValue: auth }],
+    });
+    const result = await TestBed.runInInjectionContext(() =>
+      roleGuard(
+        { data: { roles: ['PLATFORM_ADMIN'], strictRoles: true } } as never,
+        { url: '/app/platform' } as never,
+      ),
+    );
+    expect(String(result)).toContain('access-denied');
   });
 });

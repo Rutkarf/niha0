@@ -8,6 +8,8 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
 import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
 import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';
+import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 import { mapHttpError } from '../../core/api/http-error.util';
 
 @Component({
@@ -57,7 +59,11 @@ import { mapHttpError } from '../../core/api/http-error.util';
       @if (loadingEmp()) {
         <app-loading-state />
       } @else if (!employees().length) {
-        <app-empty-state title="Aucun collaborateur" icon="RH" />
+        <app-empty-state
+          title="Aucun collaborateur"
+          icon="RH"
+          description="Ajoutez un collaborateur via le formulaire ci-dessus pour constituer l’équipe et gérer les congés."
+        />
       } @else {
         <div class="table-wrap">
           <table>
@@ -81,7 +87,11 @@ import { mapHttpError } from '../../core/api/http-error.util';
       @if (loadingLeaves()) {
         <app-loading-state />
       } @else if (!leaves().length) {
-        <app-empty-state title="Aucune demande" icon="LV" />
+        <app-empty-state
+          title="Aucune demande de congé"
+          icon="LV"
+          description="Les demandes de congés des collaborateurs apparaîtront ici pour approbation ou refus."
+        />
       } @else {
         <div class="table-wrap">
           <table>
@@ -123,6 +133,8 @@ import { mapHttpError } from '../../core/api/http-error.util';
 })
 export class HcmPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly toast = inject(ToastService);
   readonly loadingAgent = signal(true);
   readonly loadingEmp = signal(true);
   readonly loadingLeaves = signal(true);
@@ -165,27 +177,50 @@ export class HcmPage implements OnInit {
       next: () => {
         this.savingEmp.set(false);
         this.firstName = this.lastName = this.jobTitle = this.department = '';
+        this.toast.success('Collaborateur ajouté');
         this.reload();
       },
       error: (err) => {
         this.savingEmp.set(false);
-        this.error.set(mapHttpError(err));
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
       },
     });
   }
 
-  removeEmployee(e: Employee): void {
-    if (!confirm(`Supprimer ${e.firstName} ${e.lastName} ?`)) return;
+  async removeEmployee(e: Employee): Promise<void> {
+    const ok = await this.confirmDialog.confirm({
+      title: 'Supprimer le collaborateur',
+      message: `Supprimer ${e.firstName} ${e.lastName} ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     this.api.deleteEmployee(e.id).subscribe({
-      next: () => this.reload(),
-      error: (err) => this.error.set(mapHttpError(err)),
+      next: () => {
+        this.toast.success('Collaborateur supprimé');
+        this.reload();
+      },
+      error: (err) => {
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
+      },
     });
   }
 
   decide(l: LeaveRequest, status: string): void {
     this.api.decideLeave(l.id, status).subscribe({
-      next: () => this.reload(),
-      error: (err) => this.error.set(mapHttpError(err)),
+      next: () => {
+        this.toast.success(status === 'APPROVED' ? 'Congé approuvé' : 'Congé refusé');
+        this.reload();
+      },
+      error: (err) => {
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
+      },
     });
   }
 

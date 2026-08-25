@@ -7,6 +7,7 @@ import { ApiService } from '../../../core/api/api.service';
 import { mapHttpError } from '../../../core/api/http-error.util';
 import { LocaleService } from '../../../core/i18n/locale.service';
 import { environment } from '../../../../environments/environment';
+import { AUTH_LAYOUT_STYLES } from '../auth-layout.styles';
 
 @Component({
   selector: 'app-login-page',
@@ -24,10 +25,10 @@ import { environment } from '../../../../environments/environment';
           </p>
         </section>
 
-        <section class="login-card">
+        <section class="login-card" aria-labelledby="login-title">
           <header class="login-header">
-            <h2>{{ locale.t('login') }}</h2>
-            <p>Espace professionnel</p>
+            <h2 id="login-title">{{ locale.t('login') }}</h2>
+            <p>Espace professionnel — identifiants sécurisés</p>
           </header>
           @if (oauthEnabled()) {
             <button type="button" class="btn btn-oauth" (click)="loginWithGoogle()">
@@ -35,7 +36,7 @@ import { environment } from '../../../../environments/environment';
             </button>
             <p class="divider"><span>ou</span></p>
           }
-          <form (ngSubmit)="submit()" class="login-form">
+          <form (ngSubmit)="submit()" class="login-form" novalidate>
             <div class="form-group">
               <label class="label" for="email">{{ locale.t('email') }}</label>
               <input
@@ -46,27 +47,39 @@ import { environment } from '../../../../environments/environment';
                 name="email"
                 required
                 autocomplete="username"
+                [attr.aria-invalid]="!!error()"
+                [attr.aria-describedby]="error() ? 'login-error' : null"
               />
             </div>
             <div class="form-group">
               <label class="label" for="password">{{ locale.t('password') }}</label>
-              <input
-                id="password"
-                class="input"
-                type="password"
-                [(ngModel)]="password"
-                name="password"
-                required
-                autocomplete="current-password"
-              />
+              <div class="pwd-row">
+                <input
+                  id="password"
+                  class="input"
+                  [type]="showPwd() ? 'text' : 'password'"
+                  [(ngModel)]="password"
+                  name="password"
+                  required
+                  autocomplete="current-password"
+                />
+                <button type="button" class="btn btn-ghost btn-sm toggle-pwd" (click)="showPwd.update(v => !v)">
+                  {{ showPwd() ? 'Masquer' : 'Afficher' }}
+                </button>
+              </div>
             </div>
             <p class="forgot-row">
               <a routerLink="/forgot-password">{{ locale.t('forgotPassword') }}</a>
             </p>
             @if (error()) {
-              <p class="error" role="alert">{{ error() }}</p>
+              <p id="login-error" class="error" role="alert">{{ error() }}</p>
             }
-            <button type="submit" class="btn btn-primary login-btn" [disabled]="auth.loading()">
+            <button
+              type="submit"
+              class="btn btn-primary login-btn"
+              [class.is-loading]="auth.loading()"
+              [disabled]="auth.loading() || !email.trim() || !password"
+            >
               {{ auth.loading() ? locale.t('loading') : locale.t('login') }}
             </button>
           </form>
@@ -83,140 +96,14 @@ import { environment } from '../../../../environments/environment';
       </div>
     </div>
   `,
-  styles: [`
-    .login-page {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 1.5rem;
-      position: relative;
-      overflow: hidden;
-      background: var(--gradient-page);
-    }
-    .atmosphere {
-      position: absolute;
-      inset: -20%;
-      background:
-        radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--accent-primary) 18%, transparent), transparent 42%),
-        radial-gradient(circle at 80% 70%, color-mix(in srgb, var(--accent-secondary) 14%, transparent), transparent 40%);
-      pointer-events: none;
-      animation: drift 18s ease-in-out infinite alternate;
-    }
-    .login-layout {
-      position: relative;
-      z-index: 1;
-      width: min(920px, 100%);
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 1.5rem;
-      align-items: stretch;
-    }
-    .brand-panel {
-      padding: 2.25rem 1.5rem 2.25rem 0.5rem;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    .eyebrow {
-      margin: 0 0 0.85rem;
-      font-size: var(--fs-sm);
-      font-weight: var(--fw-bold);
-      letter-spacing: var(--tracking-label);
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-    h1 {
-      margin: 0;
-      font-size: clamp(var(--fs-3xl), 2rem + 3vw, var(--fs-4xl));
-      font-weight: var(--fw-extrabold);
-      letter-spacing: 0.08em;
-      color: var(--text-primary);
-      line-height: var(--lh-tight);
-    }
-    .acronym {
-      margin: 0.65rem 0 1.1rem;
-      font-size: var(--fs-md);
-      color: var(--accent-primary);
-      font-weight: var(--fw-semibold);
-    }
-    .pitch {
-      margin: 0;
-      max-width: 28rem;
-      color: var(--text-secondary);
-      font-size: var(--fs-base);
-      line-height: var(--lh-normal);
-    }
-    .login-card {
-      background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-      padding: 1.85rem 1.75rem;
-      box-shadow: var(--shadow-lg);
-      backdrop-filter: blur(10px);
-      align-self: center;
-    }
-    .login-header h2 {
-      margin: 0;
-      font-size: var(--fs-xl);
-      font-weight: var(--fw-bold);
-      font-family: var(--font-display);
-      letter-spacing: var(--tracking-tight);
-    }
-    .login-header p {
-      margin: 0.35rem 0 1.35rem;
-      font-size: var(--fs-md);
-      color: var(--text-muted);
-    }
-    .btn-oauth {
-      width: 100%;
-      min-height: 2.6rem;
-      border: 1px solid var(--border-color);
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin: 1rem 0;
-      color: var(--text-muted);
-      font-size: 0.75rem;
-    }
-    .divider::before,
-    .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border-color);
-    }
-    .login-btn { width: 100%; margin-top: 0.35rem; min-height: 2.6rem; }
-    .forgot-row { margin: 0 0 0.65rem; text-align: right; font-size: 0.78rem; }
-    .error {
-      color: var(--accent-danger);
-      font-size: 0.85rem;
-      margin: 0 0 0.65rem;
-    }
-    .demo-hint {
-      margin: 1.35rem 0 0;
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      text-align: center;
-      font-family: var(--font-mono);
-    }
-    @keyframes drift {
-      from { transform: translate3d(0, 0, 0) scale(1); }
-      to { transform: translate3d(2%, -1.5%, 0) scale(1.04); }
-    }
-    @media (max-width: 800px) {
-      .login-layout { grid-template-columns: 1fr; gap: 1rem; }
-      .brand-panel { padding: 0.5rem 0 0.25rem; text-align: center; align-items: center; }
-      .pitch { margin-inline: auto; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .atmosphere { animation: none; }
-    }
-  `],
+  styles: [
+    AUTH_LAYOUT_STYLES,
+    `
+    .pwd-row { display: flex; gap: var(--space-2); align-items: stretch; }
+    .pwd-row .input { flex: 1; }
+    .toggle-pwd { flex-shrink: 0; align-self: center; }
+  `,
+  ],
 })
 export class LoginPage implements OnInit {
   readonly auth = inject(AuthService);
@@ -224,6 +111,7 @@ export class LoginPage implements OnInit {
   private readonly api = inject(ApiService);
   readonly showDemo = environment.showDemoCredentials;
   readonly oauthEnabled = signal(false);
+  readonly showPwd = signal(false);
   email = this.showDemo ? 'rutkarf@optimustest.fr' : '';
   password = this.showDemo ? 'Demo2026!' : '';
   readonly error = signal('');
@@ -239,6 +127,10 @@ export class LoginPage implements OnInit {
 
   async submit(): Promise<void> {
     this.error.set('');
+    if (!this.email.trim() || !this.password) {
+      this.error.set('Saisissez votre e-mail et votre mot de passe.');
+      return;
+    }
     try {
       await this.auth.login({ email: this.email, password: this.password });
     } catch (err) {

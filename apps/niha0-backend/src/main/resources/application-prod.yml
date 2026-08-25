@@ -6,6 +6,17 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
+  mail:
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_SMTP_STARTTLS:true}
 
 niha0:
   jwt:
@@ -15,6 +26,23 @@ niha0:
     allowed-origins: ${CORS_ORIGINS}
   security:
     demo-login-enabled: ${DEMO_LOGIN_ENABLED:false}
+    # Cookie CSRF double-submit enabled in prod; Bearer Authorization still bypasses CSRF.
+    csrf-enabled: ${CSRF_ENABLED:true}
+  storage:
+    mode: ${STORAGE_MODE:minio}
+  ai:
+    provider: ${AI_PROVIDER:openai}
+    openai:
+      allow-demo-fallback: ${AI_OPENAI_ALLOW_DEMO_FALLBACK:false}
+  mail:
+    mode: ${MAIL_MODE:smtp}
+    from: ${MAIL_FROM:noreply@nihao.app}
+  app:
+    public-url: ${APP_PUBLIC_URL}
+  billing:
+    provider: ${BILLING_PROVIDER:sumup}
+  realtime:
+    mode: ${REALTIME_MODE:memory}
 
 springdoc:
   api-docs:

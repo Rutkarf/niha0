@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sasurd.niha0.agents.dto.AgentRecommendation;
 import com.sasurd.niha0.agents.dto.ApprovalDecisionRequest;
 import com.sasurd.niha0.audit.AuditService;
+import com.sasurd.niha0.billing.EntitlementService;
 import com.sasurd.niha0.common.AgentStatus;
 import com.sasurd.niha0.common.ApiException;
 import com.sasurd.niha0.common.WorkflowStatus;
@@ -32,6 +33,7 @@ public class AgentService {
     private final RealtimeEventBroadcaster broadcaster;
     private final WebhookDeliveryService webhookDeliveryService;
     private final AuditService auditService;
+    private final EntitlementService entitlementService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AgentService(AgentRepository agentRepository,
@@ -42,7 +44,8 @@ public class AgentService {
                         RagService ragService,
                         RealtimeEventBroadcaster broadcaster,
                         WebhookDeliveryService webhookDeliveryService,
-                        AuditService auditService) {
+                        AuditService auditService,
+                        EntitlementService entitlementService) {
         this.agentRepository = agentRepository;
         this.actionRepository = actionRepository;
         this.approvalRepository = approvalRepository;
@@ -52,6 +55,7 @@ public class AgentService {
         this.broadcaster = broadcaster;
         this.webhookDeliveryService = webhookDeliveryService;
         this.auditService = auditService;
+        this.entitlementService = entitlementService;
     }
 
     @Transactional(readOnly = true)
@@ -72,6 +76,7 @@ public class AgentService {
 
     @Transactional
     public AgentAction requestRecommendation(UUID agentId) {
+        entitlementService.assertAiActionAvailable(orgId());
         Agent agent = getAgent(agentId);
         AgentRecommendation rec = recommendationProvider.recommend(agent.getCode());
         String ragContext = ragService.contextForAgent(agent.getCode(), 1000);

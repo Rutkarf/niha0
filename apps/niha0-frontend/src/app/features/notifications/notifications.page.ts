@@ -20,9 +20,18 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
       @if (loading()) {
         <app-loading-state />
       } @else if (!rows().length) {
-        <app-empty-state title="Aucune notification" icon="NOT" />
+        <app-empty-state
+          title="Aucune notification"
+          icon="NOT"
+          description="Les alertes des agents IA et les messages système de votre organisation apparaîtront ici."
+        />
       } @else {
-        <app-data-table [columns]="columns" [rows]="rows()" />
+        <app-data-table
+          [columns]="columns"
+          [rows]="rows()"
+          [filterable]="true"
+          filterPlaceholder="Filtrer par titre, type, message…"
+        />
       }
     </div>
   `,
@@ -31,6 +40,7 @@ export class NotificationsPage implements OnInit {
   private readonly api = inject(ApiService);
   readonly loading = signal(true);
   readonly rows = signal<Record<string, unknown>[]>([]);
+  /** `read` boolean is rendered as Oui/Non by app-data-table.formatValue */
   readonly columns: DataColumn[] = [
     { key: 'title', label: 'Titre', badge: false },
     { key: 'type', label: 'Type', badge: true },

@@ -70,7 +70,7 @@ interface NavGroup {
       </a>
 
       <nav class="nav" aria-label="Navigation principale">
-        @for (group of groups; track group.title) {
+        @for (group of navGroups(); track group.title) {
           @if (!collapsed()) {
             <p class="group-title">{{ group.title }}</p>
           }
@@ -416,7 +416,7 @@ export class SidebarComponent implements OnInit {
     return s?.kind === 'library' ? s.id : null;
   });
 
-  readonly groups: NavGroup[] = [
+  private readonly baseGroups: NavGroup[] = [
     {
       title: 'Accueil',
       items: [{ label: 'Dashboard', route: '/app/dashboard', icon: 'DB' }],
@@ -471,6 +471,19 @@ export class SidebarComponent implements OnInit {
       ],
     },
   ];
+
+  readonly navGroups = computed(() => {
+    if (this.auth.user()?.role !== 'PLATFORM_ADMIN') {
+      return this.baseGroups;
+    }
+    return [
+      {
+        title: 'Plateforme',
+        items: [{ label: 'Console plateforme', route: '/app/platform', icon: 'PF' }],
+      },
+      ...this.baseGroups,
+    ];
+  });
 
   constructor(
     readonly auth: AuthService,

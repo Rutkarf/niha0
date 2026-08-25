@@ -1,7 +1,7 @@
 name: CD Staging
 
-# Template — configure secrets before enabling on a protected environment.
-# Does not deploy to production automatically.
+# Builds images, pushes to GHCR when possible, deploys when STAGING_* secrets exist.
+# workflow_dispatch required for deploy; push to develop always builds.
 
 on:
   workflow_dispatch:
@@ -17,51 +17,84 @@ concurrency:
   group: cd-staging
   cancel-in-progress: true
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/niha0
+
 jobs:
   build-push:
-    name: Build images
+    name: Build & push images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    outputs:
+      sha: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Log in to GHCR
-        if: ${{ secrets.GITHUB_TOKEN != '' }}
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build backend (no push if registry unset)
-        run: |
-          docker build -t niha0-backend:${{ github.sha }} -f apps/niha0-backend/Dockerfile apps/niha0-backend || \
-            echo "Dockerfile backend missing or build skipped — wire registry in repo secrets"
-      - name: Build frontend
-        run: |
-          docker build -t niha0-frontend:${{ github.sha }} -f apps/niha0-frontend/Dockerfile apps/niha0-frontend || \
-            echo "Dockerfile frontend missing or build skipped"
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/niha0-backend
+          file: apps/niha0-backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-backend:staging
+      - name: Build & push frontend (prod nginx)
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/niha0-frontend
+          file: apps/niha0-frontend/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-frontend:staging
       - name: Smoke compose config
         run: |
           JWT_SECRET='ci-test-secret-at-least-forty-eight-characters-long!!' \
           POSTGRES_PASSWORD='ci-strong-db-password' \
           CORS_ORIGINS='https://staging.example.com' \
+          APP_PUBLIC_URL='https://staging.example.com' \
           STORAGE_S3_ACCESS_KEY='ci' STORAGE_S3_SECRET_KEY='ci-secret-key' \
+          AI_PROVIDER=openai AI_OPENAI_ALLOW_DEMO_FALLBACK=false \
+          MAIL_MODE=smtp BILLING_PROVIDER=stub \
           docker compose -f docker-compose.yml config >/dev/null
 
-  # Placeholder deploy job — replace with SSH / Kubernetes / ECS as needed.
   deploy-staging:
-    name: Deploy staging (manual gate)
+    name: Deploy staging
     needs: build-push
     runs-on: ubuntu-latest
     environment: staging
     if: github.event_name == 'workflow_dispatch'
     steps:
-      - name: Documented deploy hook
+      - uses: actions/checkout@v4
+      - name: Deploy via SSH compose (when secrets present)
+        env:
+          HOST: ${{ secrets.STAGING_HOST }}
+          KEY: ${{ secrets.STAGING_SSH_KEY }}
+          USER: ${{ secrets.STAGING_SSH_USER }}
         run: |
-          echo "Configure STAGING_HOST + deploy script in secrets."
+          set -euo pipefail
           echo "Tag: ${{ inputs.image_tag }}"
           echo "Commit: ${{ github.sha }}"
-          echo "Rollback: redeploy previous SHA; Flyway migrations are forward-only."
+          if [ -z "${HOST:-}" ] || [ -z "${KEY:-}" ]; then
+            echo "::warning::STAGING_HOST / STAGING_SSH_KEY missing — build succeeded; deploy skipped (configure GitHub environment 'staging')."
+            exit 0
+          fi
+          USER="${USER:-deploy}"
+          mkdir -p ~/.ssh
+          echo "$KEY" > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          ssh -i ~/.ssh/staging_key -o StrictHostKeyChecking=accept-new \
+            "${USER}@${HOST}" \
+            "cd /opt/niha0 && export IMAGE_TAG=${{ github.sha }} && docker compose pull && docker compose up -d && curl -fsS http://127.0.0.1:8080/api/actuator/health"
+          echo "Staging deploy OK"

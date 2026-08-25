@@ -7,6 +7,8 @@ import { LoadingStateComponent } from '../../shared/ui/loading-state/loading-sta
 import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
 import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
 import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
+import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 import { mapHttpError } from '../../core/api/http-error.util';
 
 @Component({
@@ -63,7 +65,11 @@ import { mapHttpError } from '../../core/api/http-error.util';
       @if (loadingRows()) {
         <app-loading-state />
       } @else if (!contracts().length) {
-        <app-empty-state title="Aucun contrat" icon="CTR" />
+        <app-empty-state
+          title="Aucun contrat"
+          icon="CTR"
+          description="Créez un contrat via le formulaire ci-dessus pour suivre statuts, échéances et catégories."
+        />
       } @else {
         <div class="table-wrap">
           <table>
@@ -110,6 +116,8 @@ import { mapHttpError } from '../../core/api/http-error.util';
 })
 export class LegalPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly toast = inject(ToastService);
   readonly loadingAgent = signal(true);
   readonly loadingRows = signal(true);
   readonly saving = signal(false);
@@ -144,27 +152,50 @@ export class LegalPage implements OnInit {
       next: () => {
         this.saving.set(false);
         this.title = '';
+        this.toast.success('Contrat créé');
         this.reload();
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(mapHttpError(err));
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
       },
     });
   }
 
   changeStatus(c: Contract, status: string): void {
     this.api.updateContract(c.id, { ...c, status }).subscribe({
-      next: () => this.reload(),
-      error: (err) => this.error.set(mapHttpError(err)),
+      next: () => {
+        this.toast.success('Statut du contrat mis à jour');
+        this.reload();
+      },
+      error: (err) => {
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
+      },
     });
   }
 
-  remove(c: Contract): void {
-    if (!confirm(`Supprimer ${c.title} ?`)) return;
+  async remove(c: Contract): Promise<void> {
+    const ok = await this.confirmDialog.confirm({
+      title: 'Supprimer le contrat',
+      message: `Supprimer le contrat « ${c.title} » ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     this.api.deleteContract(c.id).subscribe({
-      next: () => this.reload(),
-      error: (err) => this.error.set(mapHttpError(err)),
+      next: () => {
+        this.toast.success('Contrat supprimé');
+        this.reload();
+      },
+      error: (err) => {
+        const msg = mapHttpError(err);
+        this.error.set(msg);
+        this.toast.error(msg);
+      },
     });
   }
 

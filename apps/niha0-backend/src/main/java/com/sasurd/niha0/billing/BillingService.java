@@ -34,12 +34,6 @@ import java.util.UUID;
 @Service
 public class BillingService {
 
-    private static final Map<String, Integer> SEAT_LIMITS = Map.of(
-            "FREE", 3,
-            "PRO", 25,
-            "BUSINESS", 100
-    );
-
     private final OrganizationRepository organizationRepository;
     private final MembershipRepository membershipRepository;
     private final BillingCheckoutRepository checkoutRepository;
@@ -47,6 +41,7 @@ public class BillingService {
     private final BillingProperties billingProperties;
     private final Environment environment;
     private final AuditService auditService;
+    private final EntitlementService entitlementService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public BillingService(OrganizationRepository organizationRepository,
@@ -55,7 +50,8 @@ public class BillingService {
                           SumUpClient sumUpClient,
                           BillingProperties billingProperties,
                           Environment environment,
-                          AuditService auditService) {
+                          AuditService auditService,
+                          EntitlementService entitlementService) {
         this.organizationRepository = organizationRepository;
         this.membershipRepository = membershipRepository;
         this.checkoutRepository = checkoutRepository;
@@ -63,18 +59,22 @@ public class BillingService {
         this.billingProperties = billingProperties;
         this.environment = environment;
         this.auditService = auditService;
+        this.entitlementService = entitlementService;
     }
 
     @Transactional(readOnly = true)
     public BillingPlanResponse currentPlan() {
         Organization org = requireOrg();
-        String plan = normalizePlan(org.getBillingPlan());
-        int seatsUsed = membershipRepository.findByOrganizationIdAndActiveTrue(org.getId()).size();
+        EntitlementService.QuotaSnapshot snap = entitlementService.snapshot(org.getId());
         return new BillingPlanResponse(
-                plan,
-                seatsUsed,
-                SEAT_LIMITS.getOrDefault(plan, 3),
-                "Storage metering stub — no enforcement yet");
+                snap.plan(),
+                snap.seatsUsed(),
+                snap.seatsLimit(),
+                snap.storageNote(),
+                snap.storageUsedBytes(),
+                snap.storageLimitBytes(),
+                snap.aiActionsUsedToday(),
+                snap.aiActionsLimitDaily());
     }
 
     @Transactional

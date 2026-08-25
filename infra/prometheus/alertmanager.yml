@@ -1,0 +1,22 @@
+# Alertmanager (Phase D) — wire with Prometheus
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: default
+    webhook_configs:
+      - url: http://127.0.0.1:9999/niha0-alerts
+        send_resolved: true
+
+# Usage:
+#   docker compose -f infra/docker-compose.observability.yml up -d
+#   Point Prometheus `alerting.alertmanagers` to alertmanager:9093
+#   Replace webhook with Slack/PagerDuty for real staging.

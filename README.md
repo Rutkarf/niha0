@@ -76,4 +76,5 @@ Interrupteur dans **AI Office** (☀ SolarPunk / 🌙 Cyberpunk / ◐ Auto).
 - [Audit complet (Tâche 1)](docs/audit/project-audit.md) — REAL / MOCK / SHELL, risques, zones critiques
 - [**Checklist commerciale 0.3**](docs/product/commercial-checklist.md) — SumUp, MFA, cookies, e-mails
 - [SumUp billing](docs/ops/sumup-billing.md)
+- [Phase B staging](docs/ops/phase-b-staging.md) · [Phase C hardening](docs/security/phase-c-hardening.md) · [Phase D quality](docs/product/phase-d-quality.md) · [Phase E go-live](docs/ops/phase-e-golive.md)
 - [CHANGELOG](CHANGELOG.md) · version [`VERSION`](VERSION)

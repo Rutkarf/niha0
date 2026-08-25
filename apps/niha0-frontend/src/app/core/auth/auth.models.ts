@@ -10,7 +10,8 @@ export type Role =
   | 'LEGAL'
   | 'HR'
   | 'OPS'
-  | 'VIEWER';
+  | 'VIEWER'
+  | 'PLATFORM_ADMIN';
 
 export interface TokenResponse {
   accessToken?: string;

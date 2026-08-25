@@ -5,6 +5,18 @@ All notable changes to NIHAO are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-08-25
+
+### Added
+- **Phase B staging** : prod defaults (OpenAI, SMTP, SumUp, no demo login), HTML mail FR, CD push GHCR, restore script, `DemoUserDeactivator`
+- **Phase C hardening** : entitlements (seats/storage/AI), Postgres RLS V15, Redis rate-limit when available, GDPR erase blobs, CRM customer DTOs, CSRF on in prod, DPA template
+- **Phase D quality** : quote→invoice→payment + PDF, Playwright marketing/login in CI, Alertmanager template, i18n keys expanded
+- **Phase E go-live** : landing `/`, pricing `/pricing`, platform admin console (`PLATFORM_ADMIN`), suspend org blocks login
+
+### Changed
+- Default SPA route `/` is marketing landing (app remains under `/app/*`)
+- Billing plan response includes storage/AI quota meters
+
 ## [0.4.0] — 2026-08-25
 
 ### Added

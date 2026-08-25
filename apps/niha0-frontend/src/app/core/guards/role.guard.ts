@@ -25,14 +25,18 @@ export const roleGuard: CanActivateFn = async (route, state) => {
     return router.createUrlTree(['/login']);
   }
 
-  if (user.role === 'OWNER') {
+  const allowed = (route.data['roles'] as Role[] | undefined) ?? [];
+  const strict = route.data['strictRoles'] === true;
+
+  if (!strict && user.role === 'OWNER') {
     return true;
   }
 
-  const allowed = (route.data['roles'] as Role[] | undefined) ?? [];
   if (allowed.length === 0 || allowed.includes(user.role)) {
     return true;
   }
 
-  return router.createUrlTree(['/app/ai-office']);
+  return router.createUrlTree(['/app/access-denied'], {
+    queryParams: { from: state.url },
+  });
 };

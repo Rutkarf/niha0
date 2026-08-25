@@ -10,7 +10,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Fails fast in production when secrets / CORS / JWT are unsafe.
+ * Fails fast in production when secrets / CORS / JWT / staging-professional
+ * defaults are unsafe.
  */
 @Component
 @Profile("prod")
@@ -26,18 +27,39 @@ public class ProdSecurityValidator implements ApplicationRunner {
     private final String corsOrigins;
     private final String datasourcePassword;
     private final String storageMode;
+    private final boolean demoLoginEnabled;
+    private final String aiProvider;
+    private final boolean allowDemoFallback;
+    private final String mailMode;
+    private final String billingProvider;
+    private final String sumupApiKey;
+    private final String appPublicUrl;
 
     public ProdSecurityValidator(
             Environment environment,
             @Value("${niha0.jwt.secret:}") String jwtSecret,
             @Value("${niha0.cors.allowed-origins:}") String corsOrigins,
             @Value("${spring.datasource.password:}") String datasourcePassword,
-            @Value("${niha0.storage.mode:local}") String storageMode) {
+            @Value("${niha0.storage.mode:local}") String storageMode,
+            @Value("${niha0.security.demo-login-enabled:false}") boolean demoLoginEnabled,
+            @Value("${niha0.ai.provider:mock}") String aiProvider,
+            @Value("${niha0.ai.openai.allow-demo-fallback:false}") boolean allowDemoFallback,
+            @Value("${niha0.mail.mode:smtp}") String mailMode,
+            @Value("${niha0.billing.provider:sumup}") String billingProvider,
+            @Value("${niha0.billing.sumup.api-key:}") String sumupApiKey,
+            @Value("${niha0.app.public-url:}") String appPublicUrl) {
         this.environment = environment;
         this.jwtSecret = jwtSecret == null ? "" : jwtSecret;
         this.corsOrigins = corsOrigins == null ? "" : corsOrigins;
         this.datasourcePassword = datasourcePassword == null ? "" : datasourcePassword;
         this.storageMode = storageMode == null ? "local" : storageMode;
+        this.demoLoginEnabled = demoLoginEnabled;
+        this.aiProvider = aiProvider == null ? "mock" : aiProvider;
+        this.allowDemoFallback = allowDemoFallback;
+        this.mailMode = mailMode == null ? "log" : mailMode;
+        this.billingProvider = billingProvider == null ? "stub" : billingProvider;
+        this.sumupApiKey = sumupApiKey == null ? "" : sumupApiKey;
+        this.appPublicUrl = appPublicUrl == null ? "" : appPublicUrl;
     }
 
     @Override
@@ -51,14 +73,34 @@ public class ProdSecurityValidator implements ApplicationRunner {
         if (corsOrigins.contains("*")) {
             fail("CORS allowed-origins must not use wildcard (*) in production");
         }
-        if (datasourcePassword.isBlank() || "niha0".equals(datasourcePassword) || "password".equalsIgnoreCase(datasourcePassword)) {
+        if (datasourcePassword.isBlank() || "niha0".equals(datasourcePassword)
+                || "password".equalsIgnoreCase(datasourcePassword)) {
             fail("Database password must be set to a non-default value in production");
         }
         if ("local".equalsIgnoreCase(storageMode)) {
             fail("niha0.storage.mode=local is forbidden in production; use s3 or minio");
         }
-        log.info("Production security checks passed (profiles={})",
-                String.join(",", environment.getActiveProfiles()));
+        if (demoLoginEnabled) {
+            fail("DEMO_LOGIN_ENABLED must be false in production");
+        }
+        if ("mock".equalsIgnoreCase(aiProvider)) {
+            fail("AI_PROVIDER=mock is forbidden in production; use openai (or another real provider)");
+        }
+        if (allowDemoFallback) {
+            fail("AI_OPENAI_ALLOW_DEMO_FALLBACK must be false in production");
+        }
+        if ("log".equalsIgnoreCase(mailMode)) {
+            fail("MAIL_MODE=log is forbidden in production; use smtp");
+        }
+        if (appPublicUrl.isBlank() || appPublicUrl.contains("localhost")) {
+            fail("APP_PUBLIC_URL must be a public HTTPS URL in production (not localhost)");
+        }
+        if ("sumup".equalsIgnoreCase(billingProvider) && sumupApiKey.isBlank()) {
+            fail("BILLING_PROVIDER=sumup requires SUMUP_API_KEY in production");
+        }
+        log.info("Production security checks passed (profiles={}, storage={}, ai={}, mail={}, billing={})",
+                String.join(",", environment.getActiveProfiles()),
+                storageMode, aiProvider, mailMode, billingProvider);
     }
 
     private void fail(String message) {

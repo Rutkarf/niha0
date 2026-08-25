@@ -1,12 +1,19 @@
 import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-empty-state',
+  imports: [RouterLink],
   template: `
     <div class="empty">
       <div class="mark" aria-hidden="true">{{ icon() }}</div>
       <h3>{{ title() }}</h3>
       <p>{{ description() }}</p>
+      @if (ctaLabel() && ctaRoute()) {
+        <a class="btn btn-primary cta" [routerLink]="ctaRoute()!">{{ ctaLabel() }}</a>
+      } @else if (ctaLabel() && ctaHref()) {
+        <a class="btn btn-primary cta" [href]="ctaHref()!">{{ ctaLabel() }}</a>
+      }
     </div>
   `,
   styles: [`
@@ -50,10 +57,17 @@ import { Component, input } from '@angular/core';
       line-height: var(--lh-normal);
       color: var(--text-secondary);
     }
+    .cta {
+      margin-top: var(--space-4);
+      text-decoration: none;
+    }
   `],
 })
 export class EmptyStateComponent {
   readonly title = input.required<string>();
   readonly description = input('Aucune donnée disponible pour le moment.');
   readonly icon = input('—');
+  readonly ctaLabel = input<string | null>(null);
+  readonly ctaRoute = input<string | null>(null);
+  readonly ctaHref = input<string | null>(null);
 }

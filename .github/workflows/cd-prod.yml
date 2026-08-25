@@ -13,6 +13,10 @@ concurrency:
   group: cd-production
   cancel-in-progress: false
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/niha0
+
 jobs:
   gate:
     name: CI gate
@@ -40,24 +44,79 @@ jobs:
           npm run test -- --watch=false
           npm run build
 
+  build-push:
+    name: Build & push prod images
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve tag
+        id: meta
+        run: |
+          REF="${{ github.event.inputs.image_tag || github.ref_name }}"
+          echo "tag=${REF}" >> "$GITHUB_OUTPUT"
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/niha0-backend
+          file: apps/niha0-backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-backend:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE_PREFIX }}-backend:latest
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/niha0-frontend
+          file: apps/niha0-frontend/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE_PREFIX }}-frontend:latest
+
   deploy:
     name: Deploy production
-    needs: gate
+    needs: build-push
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - name: Documented deploy hook
+      - name: Install flyctl
+        if: ${{ secrets.FLY_API_TOKEN != '' }}
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy with flyctl
+        if: ${{ secrets.FLY_API_TOKEN != '' }}
         env:
-          DEPLOY_HOST: ${{ secrets.PROD_DEPLOY_HOST }}
-          DEPLOY_KEY: ${{ secrets.PROD_SSH_KEY }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          echo "Configure PROD_DEPLOY_HOST + PROD_SSH_KEY (or Fly API token) in GitHub environment 'production'."
-          echo "Tag/ref: ${{ github.event.inputs.image_tag || github.ref_name }}"
-          echo "Recommended: flyctl deploy --config infra/fly.toml  OR  ssh compose pull && up -d"
+          flyctl deploy --config infra/fly.toml --remote-only
+          echo "Fly.io deploy submitted"
+      - name: Deploy via SSH compose
+        if: ${{ secrets.FLY_API_TOKEN == '' && secrets.PROD_DEPLOY_HOST != '' }}
+        env:
+          HOST: ${{ secrets.PROD_DEPLOY_HOST }}
+          KEY: ${{ secrets.PROD_SSH_KEY }}
+          USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          set -euo pipefail
+          USER="${USER:-deploy}"
+          mkdir -p ~/.ssh
+          echo "$KEY" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=accept-new \
+            "${USER}@${HOST}" \
+            "cd /opt/niha0 && docker compose pull && docker compose up -d && curl -fsS http://127.0.0.1:8080/api/actuator/health"
+      - name: No deploy target configured
+        if: ${{ secrets.FLY_API_TOKEN == '' && secrets.PROD_DEPLOY_HOST == '' }}
+        run: |
+          echo "::warning::Images built & pushed. Set FLY_API_TOKEN or PROD_DEPLOY_HOST in environment 'production' to deploy."
           echo "Rollback: redeploy previous tag; Flyway is forward-only — keep DB backups."
-          if [ -z "$DEPLOY_HOST" ]; then
-            echo "No PROD_DEPLOY_HOST secret — dry-run only (OK for template)."
-            exit 0
-          fi
-          echo "Host configured — wire your deploy script here."

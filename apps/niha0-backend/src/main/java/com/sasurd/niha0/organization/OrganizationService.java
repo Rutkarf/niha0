@@ -1,6 +1,7 @@
 package com.sasurd.niha0.organization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sasurd.niha0.billing.EntitlementService;
 import com.sasurd.niha0.common.ApiException;
 import com.sasurd.niha0.common.Role;
 import com.sasurd.niha0.identity.MailService;
@@ -65,6 +66,7 @@ public class OrganizationService {
     private final ObjectStorageService objectStorage;
     private final StoredAssetRepository storedAssetRepository;
     private final DocumentIndexingService documentIndexingService;
+    private final EntitlementService entitlementService;
 
     public OrganizationService(OrganizationRepository organizationRepository,
                                MembershipRepository membershipRepository,
@@ -74,7 +76,8 @@ public class OrganizationService {
                                CompanyDataAssetRepository dataAssetRepository,
                                ObjectStorageService objectStorage,
                                StoredAssetRepository storedAssetRepository,
-                               DocumentIndexingService documentIndexingService) {
+                               DocumentIndexingService documentIndexingService,
+                               EntitlementService entitlementService) {
         this.organizationRepository = organizationRepository;
         this.membershipRepository = membershipRepository;
         this.organizationInviteRepository = organizationInviteRepository;
@@ -84,6 +87,7 @@ public class OrganizationService {
         this.objectStorage = objectStorage;
         this.storedAssetRepository = storedAssetRepository;
         this.documentIndexingService = documentIndexingService;
+        this.entitlementService = entitlementService;
     }
 
     @Transactional(readOnly = true)
@@ -145,6 +149,7 @@ public class OrganizationService {
             }
             Organization org = requireOrg();
             UUID orgId = org.getId();
+            entitlementService.assertStorageAvailable(orgId, bytes.length);
 
             // Persist binary outside DB (source of truth going forward).
             ObjectStorageService.StoredObject stored = objectStorage.put(
@@ -265,6 +270,7 @@ public class OrganizationService {
 
         try {
             byte[] bytes = file.getBytes();
+            entitlementService.assertStorageAvailable(orgId, bytes.length);
             ObjectStorageService.StoredObject stored = objectStorage.put(
                     orgId,
                     "document",
@@ -330,6 +336,7 @@ public class OrganizationService {
             throw new ApiException(400, "Cannot invite with OWNER role");
         }
         UUID orgId = SecurityUtils.requireOrganizationId();
+        entitlementService.assertInviteSlotAvailable(orgId);
         String email = request.email().trim().toLowerCase(Locale.ROOT);
 
         OrganizationInvite invite = new OrganizationInvite();
@@ -367,6 +374,10 @@ public class OrganizationService {
         boolean newActive = request.active() != null ? request.active() : membership.isActive();
 
         assertOwnerSafeguards(membership, newRole, newActive, currentUserId);
+
+        if (request.active() != null && request.active() && !membership.isActive()) {
+            entitlementService.assertSeatAvailable(orgId);
+        }
 
         if (request.role() != null) {
             membership.setRole(request.role());

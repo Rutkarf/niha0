@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
@@ -8,6 +8,10 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
 import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
 import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';
+import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
+import { ToastService } from '../../shared/ui/toast/toast.service';
+import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
+import { OPP_STAGE_OPTIONS } from '../../shared/ui/status-labels';
 import { mapHttpError } from '../../core/api/http-error.util';
 
 @Component({
@@ -20,6 +24,7 @@ import { mapHttpError } from '../../core/api/http-error.util';
     AgentOfficeLinkComponent,
     AgentHubCardComponent,
     StatusBadgeComponent,
+    SkeletonComponent,
   ],
   template: `
     <div class="page">
@@ -38,10 +43,6 @@ import { mapHttpError } from '../../core/api/http-error.util';
         <app-agent-hub-card [agent]="agent()!" officeQuery="sales" />
       }
 
-      @if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
-      }
-
       <section class="block">
         <form class="create-form card" (ngSubmit)="createOpp()">
           <h2>Nouvelle opportunité</h2>
@@ -54,11 +55,9 @@ import { mapHttpError } from '../../core/api/http-error.util';
             </label>
             <label class="label">Étape
               <select class="input" [(ngModel)]="oppStage" name="oppStage">
-                <option value="QUALIFICATION">QUALIFICATION</option>
-                <option value="PROPOSAL">PROPOSAL</option>
-                <option value="NEGOTIATION">NEGOTIATION</option>
-                <option value="WON">WON</option>
-                <option value="LOST">LOST</option>
+                @for (opt of stageOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
               </select>
             </label>
             <label class="label">Prob. %
@@ -72,33 +71,52 @@ import { mapHttpError } from '../../core/api/http-error.util';
 
         <h2 class="section-title">Opportunités</h2>
         @if (loadingOpp()) {
-          <app-loading-state message="Chargement du pipeline…" />
+          <app-skeleton message="Chargement du pipeline…" [lines]="5" />
         } @else if (!opps().length) {
-          <app-empty-state title="Aucune opportunité" icon="OPP" />
+          <app-empty-state
+            title="Aucune opportunité"
+            icon="OPP"
+            description="Créez une opportunité avec le formulaire ci-dessus pour alimenter le pipeline."
+          />
         } @else {
+          <div class="table-toolbar">
+            <label class="search">
+              <span class="sr-only">Filtrer</span>
+              <input
+                class="input"
+                type="search"
+                placeholder="Rechercher une opportunité…"
+                [ngModel]="oppQuery()"
+                (ngModelChange)="oppQuery.set($event)"
+              />
+            </label>
+            <p class="meta">{{ filteredOpps().length }} résultat(s)</p>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr><th>Opportunité</th><th>Étape</th><th>Montant</th><th>Prob.</th><th></th></tr>
               </thead>
               <tbody>
-                @for (o of opps(); track o.id) {
+                @for (o of filteredOpps(); track o.id) {
                   <tr>
                     <td>{{ o.title }}</td>
                     <td>
                       <select class="input stage" [ngModel]="o.stage" (ngModelChange)="changeStage(o, $event)">
-                        <option value="QUALIFICATION">QUALIFICATION</option>
-                        <option value="PROPOSAL">PROPOSAL</option>
-                        <option value="NEGOTIATION">NEGOTIATION</option>
-                        <option value="WON">WON</option>
-                        <option value="LOST">LOST</option>
+                        @for (opt of stageOptions; track opt.value) {
+                          <option [value]="opt.value">{{ opt.label }}</option>
+                        }
                       </select>
                     </td>
-                    <td>{{ o.amount }}</td>
+                    <td>{{ formatAmount(o.amount) }}</td>
                     <td>{{ o.probability }}%</td>
                     <td>
                       <button type="button" class="btn btn-danger btn-sm" (click)="removeOpp(o)">Suppr.</button>
                     </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="empty-cell">Aucun résultat pour cette recherche</td>
                   </tr>
                 }
               </tbody>
@@ -131,17 +149,34 @@ import { mapHttpError } from '../../core/api/http-error.util';
 
         <h2 class="section-title">Prospects</h2>
         @if (loadingLeads()) {
-          <app-loading-state message="Chargement des leads…" />
+          <app-skeleton message="Chargement des leads…" [lines]="5" />
         } @else if (!leads().length) {
-          <app-empty-state title="Aucun prospect" icon="LED" />
+          <app-empty-state
+            title="Aucun prospect"
+            icon="LED"
+            description="Ajoutez un prospect via le formulaire pour enrichir votre pipeline commercial."
+          />
         } @else {
+          <div class="table-toolbar">
+            <label class="search">
+              <span class="sr-only">Filtrer</span>
+              <input
+                class="input"
+                type="search"
+                placeholder="Rechercher un prospect…"
+                [ngModel]="leadQuery()"
+                (ngModelChange)="leadQuery.set($event)"
+              />
+            </label>
+            <p class="meta">{{ filteredLeads().length }} résultat(s)</p>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr><th>Société</th><th>Contact</th><th>Statut</th><th>Score</th><th>Source</th><th></th></tr>
               </thead>
               <tbody>
-                @for (l of leads(); track l.id) {
+                @for (l of filteredLeads(); track l.id) {
                   <tr>
                     <td>{{ l.companyName }}</td>
                     <td>{{ l.contactName }}</td>
@@ -151,6 +186,10 @@ import { mapHttpError } from '../../core/api/http-error.util';
                     <td>
                       <button type="button" class="btn btn-danger btn-sm" (click)="removeLead(l)">Suppr.</button>
                     </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="empty-cell">Aucun résultat pour cette recherche</td>
                   </tr>
                 }
               </tbody>
@@ -166,7 +205,12 @@ import { mapHttpError } from '../../core/api/http-error.util';
     .create-form h2 { margin: 0 0 0.75rem; font-size: 0.95rem; font-family: var(--font-display); }
     .row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
     .label { margin-bottom: 0; min-width: 140px; flex: 1; }
-    .error { color: var(--accent-danger); margin-bottom: 1rem; }
+    .table-toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 0.75rem; margin-bottom: 0.75rem;
+    }
+    .search { flex: 1; min-width: 180px; max-width: 320px; }
+    .meta { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
     .table-wrap {
       overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);
       background: var(--bg-elevated);
@@ -175,20 +219,28 @@ import { mapHttpError } from '../../core/api/http-error.util';
     th, td { padding: 0.7rem 0.9rem; text-align: left; border-bottom: 1px solid var(--border-color); }
     th { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
     .stage { min-width: 140px; font-size: 0.8rem; }
-    .btn-sm { font-size: 0.72rem; padding: 0.25rem 0.5rem; min-height: auto; }
+    .empty-cell { text-align: center; color: var(--text-muted); padding: 1.25rem; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+    }
   `],
 })
 export class SalesPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   readonly loadingAgent = signal(true);
   readonly loadingOpp = signal(true);
   readonly loadingLeads = signal(true);
   readonly savingOpp = signal(false);
   readonly savingLead = signal(false);
-  readonly error = signal('');
   readonly agent = signal<Agent | null>(null);
   readonly opps = signal<Opportunity[]>([]);
   readonly leads = signal<Lead[]>([]);
+  readonly oppQuery = signal('');
+  readonly leadQuery = signal('');
+  readonly stageOptions = OPP_STAGE_OPTIONS;
 
   oppTitle = '';
   oppAmount = 0;
@@ -198,6 +250,31 @@ export class SalesPage implements OnInit {
   leadContact = '';
   leadSource = '';
   leadScore = 50;
+
+  readonly filteredOpps = computed(() => {
+    const q = this.oppQuery().trim().toLowerCase();
+    const list = this.opps();
+    if (!q) return list;
+    return list.filter(
+      (o) =>
+        o.title.toLowerCase().includes(q) ||
+        (o.stage ?? '').toLowerCase().includes(q) ||
+        String(o.amount).includes(q),
+    );
+  });
+
+  readonly filteredLeads = computed(() => {
+    const q = this.leadQuery().trim().toLowerCase();
+    const list = this.leads();
+    if (!q) return list;
+    return list.filter(
+      (l) =>
+        l.companyName.toLowerCase().includes(q) ||
+        (l.contactName ?? '').toLowerCase().includes(q) ||
+        (l.status ?? '').toLowerCase().includes(q) ||
+        (l.source ?? '').toLowerCase().includes(q),
+    );
+  });
 
   ngOnInit(): void {
     this.api.getAgents().subscribe({
@@ -211,8 +288,14 @@ export class SalesPage implements OnInit {
     this.reloadLeads();
   }
 
+  formatAmount(amount: number): string {
+    return Number(amount ?? 0).toLocaleString('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+    });
+  }
+
   createOpp(): void {
-    this.error.set('');
     this.savingOpp.set(true);
     this.api
       .createOpportunity({
@@ -227,32 +310,44 @@ export class SalesPage implements OnInit {
           this.oppTitle = '';
           this.oppAmount = 0;
           this.oppProb = 10;
+          this.toast.success('Opportunité créée.');
           this.reloadOpps();
         },
         error: (err) => {
           this.savingOpp.set(false);
-          this.error.set(mapHttpError(err, 'Création opportunité impossible.'));
+          this.toast.error(mapHttpError(err, 'Création opportunité impossible.'));
         },
       });
   }
 
   changeStage(o: Opportunity, stage: string): void {
     this.api.updateOpportunity(o.id, { ...o, stage }).subscribe({
-      next: () => this.reloadOpps(),
-      error: (err) => this.error.set(mapHttpError(err, 'Mise à jour impossible.')),
+      next: () => {
+        this.toast.success('Étape mise à jour.');
+        this.reloadOpps();
+      },
+      error: (err) => this.toast.error(mapHttpError(err, 'Mise à jour impossible.')),
     });
   }
 
-  removeOpp(o: Opportunity): void {
-    if (!confirm(`Supprimer ${o.title} ?`)) return;
+  async removeOpp(o: Opportunity): Promise<void> {
+    const ok = await this.confirmDialog.confirm({
+      title: 'Supprimer l’opportunité',
+      message: `Voulez-vous supprimer « ${o.title} » ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     this.api.deleteOpportunity(o.id).subscribe({
-      next: () => this.reloadOpps(),
-      error: (err) => this.error.set(mapHttpError(err, 'Suppression impossible.')),
+      next: () => {
+        this.toast.success('Opportunité supprimée.');
+        this.reloadOpps();
+      },
+      error: (err) => this.toast.error(mapHttpError(err, 'Suppression impossible.')),
     });
   }
 
   createLead(): void {
-    this.error.set('');
     this.savingLead.set(true);
     this.api
       .createLead({
@@ -269,20 +364,30 @@ export class SalesPage implements OnInit {
           this.leadContact = '';
           this.leadSource = '';
           this.leadScore = 50;
+          this.toast.success('Prospect créé.');
           this.reloadLeads();
         },
         error: (err) => {
           this.savingLead.set(false);
-          this.error.set(mapHttpError(err, 'Création prospect impossible.'));
+          this.toast.error(mapHttpError(err, 'Création prospect impossible.'));
         },
       });
   }
 
-  removeLead(l: Lead): void {
-    if (!confirm(`Supprimer ${l.companyName} ?`)) return;
+  async removeLead(l: Lead): Promise<void> {
+    const ok = await this.confirmDialog.confirm({
+      title: 'Supprimer le prospect',
+      message: `Voulez-vous supprimer « ${l.companyName} » ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     this.api.deleteLead(l.id).subscribe({
-      next: () => this.reloadLeads(),
-      error: (err) => this.error.set(mapHttpError(err, 'Suppression impossible.')),
+      next: () => {
+        this.toast.success('Prospect supprimé.');
+        this.reloadLeads();
+      },
+      error: (err) => this.toast.error(mapHttpError(err, 'Suppression impossible.')),
     });
   }
 

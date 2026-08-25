@@ -8,6 +8,8 @@ import { DATA_FILE_ACCEPT, DATA_MAX_BYTES } from '../../core/workspace/professio
 import { mapHttpError } from '../../core/api/http-error.util';
 import { ApiService } from '../../core/api/api.service';
 import type { CompanyDataAsset } from '../../core/workspace/professional.models';
+import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 
 function formatRagEngineLabel(stats: {
   engine: string;
@@ -214,6 +216,8 @@ function formatRagEngineLabel(stats: {
 export class CompanyDataPage implements OnInit {
   readonly ws = inject(ProfessionalWorkspaceService);
   private readonly api = inject(ApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly toast = inject(ToastService);
   readonly accept = DATA_FILE_ACCEPT;
   readonly dragOver = signal(false);
   readonly error = signal('');
@@ -393,7 +397,18 @@ export class CompanyDataPage implements OnInit {
   }
 
   async remove(id: string): Promise<void> {
-    if (!confirm('Supprimer ce fichier ?')) return;
-    await this.ws.deleteDataAsset(id);
+    const ok = await this.confirmDialog.confirm({
+      title: 'Supprimer le fichier',
+      message: 'Supprimer ce fichier et son index RAG associé ?',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await this.ws.deleteDataAsset(id);
+      this.toast.success('Fichier supprimé.');
+    } catch (err) {
+      this.toast.error(mapHttpError(err, 'Suppression impossible'));
+    }
   }
 }

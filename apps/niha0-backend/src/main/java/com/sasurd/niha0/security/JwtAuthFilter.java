@@ -3,6 +3,7 @@ package com.sasurd.niha0.security;
 import com.sasurd.niha0.common.Role;
 import com.sasurd.niha0.realtime.SseTicketService;
 import com.sasurd.niha0.tenancy.TenantContext;
+import com.sasurd.niha0.tenancy.TenantRlsSupport;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,10 +25,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final SseTicketService sseTicketService;
+    private final TenantRlsSupport tenantRlsSupport;
 
-    public JwtAuthFilter(JwtService jwtService, SseTicketService sseTicketService) {
+    public JwtAuthFilter(JwtService jwtService,
+                         SseTicketService sseTicketService,
+                         TenantRlsSupport tenantRlsSupport) {
         this.jwtService = jwtService;
         this.sseTicketService = sseTicketService;
+        this.tenantRlsSupport = tenantRlsSupport;
     }
 
     @Override
@@ -102,6 +107,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                    String email,
                                    Role role) {
         TenantContext.set(organizationId, userId);
+        tenantRlsSupport.applyOrganization(organizationId);
         Niha0UserDetails userDetails = new Niha0UserDetails(
                 userId, organizationId, email, "", role, true);
         UsernamePasswordAuthenticationToken authentication =

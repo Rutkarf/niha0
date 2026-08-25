@@ -14,6 +14,9 @@ import com.sasurd.niha0.organization.MembershipRepository;
 import com.sasurd.niha0.organization.Organization;
 import com.sasurd.niha0.organization.OrganizationRepository;
 import com.sasurd.niha0.security.SecurityUtils;
+import com.sasurd.niha0.storage.ObjectStorageService;
+import com.sasurd.niha0.storage.StoredAsset;
+import com.sasurd.niha0.storage.StoredAssetRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,8 @@ public class PrivacyService {
     private final TicketRepository ticketRepository;
     private final InvoiceRepository invoiceRepository;
     private final AgentRepository agentRepository;
+    private final StoredAssetRepository storedAssetRepository;
+    private final ObjectStorageService objectStorage;
 
     public PrivacyService(UserRepository userRepository,
                           MembershipRepository membershipRepository,
@@ -43,7 +48,9 @@ public class PrivacyService {
                           CustomerRepository customerRepository,
                           TicketRepository ticketRepository,
                           InvoiceRepository invoiceRepository,
-                          AgentRepository agentRepository) {
+                          AgentRepository agentRepository,
+                          StoredAssetRepository storedAssetRepository,
+                          ObjectStorageService objectStorage) {
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
         this.organizationRepository = organizationRepository;
@@ -52,6 +59,8 @@ public class PrivacyService {
         this.ticketRepository = ticketRepository;
         this.invoiceRepository = invoiceRepository;
         this.agentRepository = agentRepository;
+        this.storedAssetRepository = storedAssetRepository;
+        this.objectStorage = objectStorage;
     }
 
     @Transactional(readOnly = true)
@@ -68,15 +77,25 @@ public class PrivacyService {
                 .map(this::membershipSummary)
                 .toList();
 
+        List<Map<String, Object>> assets = storedAssetRepository.findByCreatedBy(userId).stream()
+                .map(a -> Map.<String, Object>of(
+                        "id", a.getId(),
+                        "kind", a.getKind(),
+                        "originalFilename", a.getOriginalFilename(),
+                        "sizeBytes", a.getSizeBytes(),
+                        "organizationId", a.getOrganizationId()))
+                .toList();
+
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("profile", Map.of(
                 "id", user.getId(),
                 "email", user.getEmail(),
                 "firstName", user.getFirstName(),
                 "lastName", user.getLastName(),
-                "locale", user.getLocale(),
+                "locale", user.getLocale() == null ? "fr" : user.getLocale(),
                 "createdAt", user.getCreatedAt()));
         payload.put("memberships", memberships);
+        payload.put("uploadedAssets", assets);
         payload.put("currentOrganization", Map.of(
                 "id", org.getId(),
                 "name", org.getName(),
@@ -97,6 +116,7 @@ public class PrivacyService {
         payload.put("organizationId", orgId);
         payload.put("tenantDataCounts", tenantCounts(orgId));
         payload.put("activeMembers", membershipRepository.findByOrganizationIdAndActiveTrue(orgId).size());
+        payload.put("storageBytes", storedAssetRepository.sumSizeBytesByOrganizationId(orgId));
 
         logPrivacyRequest(orgId, userId, "EXPORT_ORG", payload);
         return payload;
@@ -120,6 +140,17 @@ public class PrivacyService {
             }
         }
 
+        int deletedAssets = 0;
+        for (StoredAsset asset : storedAssetRepository.findByCreatedBy(userId)) {
+            try {
+                objectStorage.delete(asset.getStorageKey());
+            } catch (Exception ignored) {
+                // continue deleting metadata even if blob already gone
+            }
+            storedAssetRepository.delete(asset);
+            deletedAssets++;
+        }
+
         user.setEmail("erased+" + UUID.randomUUID() + "@deleted.local");
         user.setFirstName("Erased");
         user.setLastName("User");
@@ -133,7 +164,10 @@ public class PrivacyService {
             membershipRepository.save(membership);
         }
 
-        Map<String, Object> payload = Map.of("userId", userId, "status", "ERASED");
+        Map<String, Object> payload = Map.of(
+                "userId", userId,
+                "status", "ERASED",
+                "deletedAssets", deletedAssets);
         UUID orgId = SecurityUtils.currentOrganizationId();
         if (orgId != null) {
             logPrivacyRequest(orgId, userId, "ERASE", payload);
@@ -149,6 +183,7 @@ public class PrivacyService {
         counts.put("tickets", ticketRepository.countByOrganizationId(orgId));
         counts.put("invoices", invoiceRepository.countByOrganizationId(orgId));
         counts.put("agents", agentRepository.countByOrganizationId(orgId));
+        counts.put("storageBytes", storedAssetRepository.sumSizeBytesByOrganizationId(orgId));
         return counts;
     }
 
