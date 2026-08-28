@@ -1,22 +1,21 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CHANGELOG_ENTRIES } from './changelog.content';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
 
 @Component({
   selector: 'app-changelog-page',
-  imports: [RouterLink],
+  imports: [RouterLink, FeaturePageHeaderComponent],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/settings" class="back-ao">← Paramètres</a>
-          <h1>Journal des versions</h1>
-          <p>Historique des évolutions NIHAO</p>
-        </div>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        group="Système"
+        title="Journal des versions"
+        backLabel="← AI Office"
+      />
 
       @for (entry of entries; track entry.version) {
-        <section class="card changelog-entry">
+        <section class="feature-hub card changelog-entry">
           <header>
             <h2>v{{ entry.version }}</h2>
             <time>{{ entry.date }}</time>
@@ -36,7 +35,7 @@ import { CHANGELOG_ENTRIES } from './changelog.content';
     </div>
   `,
   styles: [`
-    .changelog-entry { max-width: 640px; padding: 1.15rem 1.25rem; margin-bottom: 1rem; }
+    .changelog-entry { max-width: 640px; }
     .changelog-entry header { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.75rem; }
     .changelog-entry h2 { margin: 0; font-size: 1.1rem; }
     time { font-size: 0.78rem; color: var(--text-muted); }

@@ -1,6 +1,6 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
 
 export interface ModuleMeta {
   title: string;
@@ -13,28 +13,20 @@ export interface ModuleMeta {
 
 @Component({
   selector: 'app-module-placeholder',
-  imports: [RouterLink, AgentOfficeLinkComponent],
+  imports: [RouterLink, FeaturePageHeaderComponent],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/ai-office" class="back-ao">← AI Office</a>
-          <p class="module-code">{{ code() }}</p>
-          <h1>{{ meta().title }}</h1>
-          <p>{{ meta().description }}</p>
-          @if (meta().agentModuleKey) {
-            <app-agent-office-link [moduleKey]="meta().agentModuleKey!" [label]="meta().agentLabel || meta().title" />
-          }
-        </div>
-        <span class="soon-pill">Bientôt</span>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        [soon]="true"
+        [title]="meta().title"
+        [code]="code()"
+        [backLabel]="'← AI Office ' + meta().title"
+        [backQueryParams]="backQueryParams()"
+      />
 
-      <div class="placeholder-card card">
+      <div class="feature-hub card placeholder-card">
+        <p class="feature-callout">{{ meta().description }}</p>
         <h2 class="section-title">Module en préparation</h2>
-        <p>
-          Ce module n’est pas encore disponible. Les données métier ne sont pas fictives :
-          l’écran est volontairement un shell « Bientôt ».
-        </p>
         <h3>Fonctionnalités prévues</h3>
         <ul>
           @for (f of meta().features; track f) {
@@ -108,6 +100,11 @@ export interface ModuleMeta {
 })
 export class ModulePlaceholderComponent {
   readonly meta = input.required<ModuleMeta>();
+
+  readonly backQueryParams = computed((): Record<string, string> | null => {
+    const key = this.meta().agentModuleKey;
+    return key ? { agent: key } : null;
+  });
 
   code(): string {
     const raw = this.meta().icon?.trim() || this.meta().title;

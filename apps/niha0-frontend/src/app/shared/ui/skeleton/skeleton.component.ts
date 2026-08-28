@@ -32,14 +32,7 @@ import { Component, computed, input } from '@angular/core';
       background-size: 200% 100%;
       animation: shimmer 1.2s ease-in-out infinite;
     }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-    }
-    @keyframes shimmer {
+@keyframes shimmer {
       from { background-position: 100% 0; }
       to { background-position: -100% 0; }
     }

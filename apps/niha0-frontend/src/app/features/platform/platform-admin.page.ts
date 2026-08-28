@@ -1,11 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { mapHttpError } from '../../core/api/http-error.util';
 import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
 import { ToastService } from '../../shared/ui/toast/toast.service';
+import { CompanyLabelPipe } from '../../shared/pipes/company-label.pipe';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
 
 interface PlatformOrg {
   id: string;
@@ -19,25 +20,24 @@ interface PlatformOrg {
 
 @Component({
   selector: 'app-platform-admin-page',
-  imports: [RouterLink],
+  imports: [CompanyLabelPipe, FeaturePageHeaderComponent],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/ai-office" class="back-ao">← AI Office</a>
-          <h1>{{ locale.t('platformAdmin') }}</h1>
-          <p>Organisations SaaS — suspend / unsuspend (rôle PLATFORM_ADMIN)</p>
-        </div>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        group="Plateforme"
+        [title]="locale.t('platformAdmin')"
+        backLabel="← AI Office"
+      />
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
       }
       @if (summary()) {
-        <p class="callout">{{ summary()!.organizationCount }} orgs · {{ summary()!.suspendedCount }} suspendues</p>
+        <p class="feature-callout">{{ summary()!.organizationCount }} orgs · {{ summary()!.suspendedCount }} suspendues</p>
       }
       @if (loading()) {
         <p class="muted">Chargement…</p>
       } @else {
+        <section class="feature-hub card">
         <table class="data">
           <thead>
             <tr>
@@ -52,7 +52,7 @@ interface PlatformOrg {
           <tbody>
             @for (org of orgs(); track org.id) {
               <tr>
-                <td>{{ org.name }} <small>{{ org.slug }}</small></td>
+                <td>{{ org.name | companyLabel }} <small>{{ org.slug }}</small></td>
                 <td>{{ org.billingPlan }}</td>
                 <td>
                   <span class="status" [class.suspended]="org.status === 'SUSPENDED'">{{ org.status }}</span>
@@ -88,6 +88,7 @@ interface PlatformOrg {
             }
           </tbody>
         </table>
+        </section>
       }
     </div>
   `,

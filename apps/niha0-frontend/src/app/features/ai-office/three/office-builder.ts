@@ -6,8 +6,10 @@ import {
   ROOM_CENTER_Z,
   ROOM_DEPTH,
   ROOM_WIDTH,
+  OPEN_SPACE_CARPET,
 } from './layout';
 import type { ScenePalette, SceneTheme } from './types';
+import { RENDER_PERF, resolveShadowMapSize, shouldDisableShadows } from './render-performance';
 
 function isDayTheme(theme: SceneTheme): boolean {
   return theme === 'SOLARPUNK' || theme === 'CORPORATE';
@@ -63,7 +65,8 @@ export function buildOfficeEnvironment(
 
 function addLights(scene: THREE.Scene, palette: ScenePalette, theme: SceneTheme): void {
   const isDay = isDayTheme(theme);
-  const shadowSize = typeof window !== 'undefined' && window.devicePixelRatio > 1.5 ? 512 : 1024;
+  const shadowsEnabled = !shouldDisableShadows(RENDER_PERF);
+  const shadowSize = resolveShadowMapSize(RENDER_PERF, shadowsEnabled);
 
   if (isDay) {
     const ambient = new THREE.AmbientLight(theme === 'CORPORATE' ? 0xf0f4f8 : 0xe8f4ec, theme === 'CORPORATE' ? 0.5 : 0.42);
@@ -266,14 +269,14 @@ function addDataStreams(scene: THREE.Scene, palette: ScenePalette, theme: SceneT
 function addZoneMarkers(scene: THREE.Scene, palette: ScenePalette, theme: SceneTheme): void {
   const carpetColor = isDayTheme(theme) ? (theme === 'CORPORATE' ? '#D0DAE6' : '#C5DFA8') : '#1E293B';
   const carpet = new THREE.Mesh(
-    new THREE.BoxGeometry(16, 0.018, 12),
+    new THREE.BoxGeometry(OPEN_SPACE_CARPET.width, 0.018, OPEN_SPACE_CARPET.depth),
     mat(carpetColor, {
       roughness: 0.95,
       emissive: theme === 'CYBERPUNK' ? palette.ceo : palette.plant,
       emissiveIntensity: theme === 'CYBERPUNK' ? 0.08 : 0.05,
     }),
   );
-  carpet.position.set(7.2, 0.008, 1.4);
+  carpet.position.set(OPEN_SPACE_CARPET.centerX, 0.008, OPEN_SPACE_CARPET.centerZ);
   scene.add(carpet);
 
   // Left CEO zone platform hint
@@ -399,27 +402,22 @@ function addWindows(
 }
 
 function addPlants(scene: THREE.Scene, palette: ScenePalette, theme: SceneTheme): void {
+  /** Plantes décoratives — aucune à droite de l'open-space (X > 8). */
   const spots: Array<[number, number, number, number]> =
     isDayTheme(theme)
       ? [
           [-14.8, 0, -9.5, 1.3],
-          [16.5, 0, -9.5, 1.15],
           [-14.6, 0, 10.2, 1.0],
-          [16.2, 0, 10.2, 1.05],
           [-6, 0, -9.8, 0.95],
           [6, 0, -9.8, 1.0],
           [-8, 0, 10.4, 0.9],
           [0, 0, -10, 0.85],
-          [10, 0, 10.4, 0.95],
           [4, 0, 10.6, 0.8],
           [-2, 0, 10.5, 0.85],
-          [16, 0, 0, 1.1],
         ]
       : [
           [-14.8, 0, -9.5, 0.9],
-          [16.5, 0, -9.5, 0.85],
           [-14.4, 0, 10, 0.8],
-          [16, 0, 10, 0.8],
         ];
 
   for (const [x, y, z, scale] of spots) {

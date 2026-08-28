@@ -1,44 +1,34 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { Agent } from '../../core/api/api.models';
-import { LoadingStateComponent } from '../../shared/ui/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
-import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
-import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
+import { FeatureAgentHostComponent } from '../../shared/ui/feature-agent-host/feature-agent-host.component';
 
 @Component({
   selector: 'app-etl-page',
-  imports: [
-    RouterLink,
-    LoadingStateComponent,
-    EmptyStateComponent,
-    AgentOfficeLinkComponent,
-    AgentHubCardComponent,
-  ],
+  imports: [FeaturePageHeaderComponent, FeatureAgentHostComponent],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/ai-office" class="back-ao">← AI Office</a>
-          <p class="module-code">ETETL</p>
-          <h1>ETETL</h1>
-          <p>Intégration de données — module données (Bientôt)</p>
-          <app-agent-office-link moduleKey="etl" label="ETETL" libraryId="ETETL" />
-        </div>
-        <span class="soon-pill">Bientôt</span>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        group="Gestion"
+        code="ETETL"
+        title="ETETL"
+        [soon]="true"
+        backLabel="← AI Office ETETL"
+        [backQueryParams]="{ agent: 'analytics' }"
+      />
 
-      @if (loading()) {
-        <app-loading-state message="Chargement agent…" />
-      } @else if (!agent()) {
-        <app-empty-state title="Agent Analytics indisponible" icon="ET" />
-      } @else {
-        <app-agent-hub-card [agent]="agent()!" officeQuery="analytics" />
-        <p class="callout">
-          Connecteurs et pipelines à venir. Les syncs critiques resteront soumises à validation CEO.
-        </p>
-      }
+      <app-feature-agent-host
+        [agent]="agent()"
+        [loading]="loading()"
+        officeQuery="analytics"
+        [sectionLabel]="'Agent dédié ETETL'"
+        officeLinkLabel="ETETL"
+      />
+
+      <p class="feature-callout">
+        Connecteurs et pipelines à venir. Les syncs critiques resteront soumises à validation CEO.
+      </p>
     </div>
   `,
 })

@@ -71,6 +71,12 @@ export class LocaleService {
   readonly locale = this.localeSignal.asReadonly();
   readonly isFrench = computed(() => this.localeSignal() === 'fr');
 
+  constructor() {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = this.localeSignal();
+    }
+  }
+
   t(key: DictKey): string {
     return DICT[this.localeSignal()][key];
   }

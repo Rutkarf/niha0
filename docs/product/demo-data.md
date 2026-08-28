@@ -4,7 +4,7 @@
 
 | Champ | Valeur |
 |-------|--------|
-| Nom | **OptimusTest** |
+| Nom | **Optimus Test** |
 | Slug | `optimustest` |
 | Secteur | Services digitaux & SaaS |
 

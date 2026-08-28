@@ -1,44 +1,34 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { Agent } from '../../core/api/api.models';
-import { LoadingStateComponent } from '../../shared/ui/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
-import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
-import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
+import { FeatureAgentHostComponent } from '../../shared/ui/feature-agent-host/feature-agent-host.component';
 
 @Component({
   selector: 'app-scm-page',
-  imports: [
-    RouterLink,
-    LoadingStateComponent,
-    EmptyStateComponent,
-    AgentOfficeLinkComponent,
-    AgentHubCardComponent,
-  ],
+  imports: [FeaturePageHeaderComponent, FeatureAgentHostComponent],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/ai-office" class="back-ao">← AI Office</a>
-          <p class="module-code">SCSC</p>
-          <h1>SCSC</h1>
-          <p>Supply chain — module données (Bientôt)</p>
-          <app-agent-office-link moduleKey="scm" label="SCSC" libraryId="SCSC" />
-        </div>
-        <span class="soon-pill">Bientôt</span>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        group="Gestion"
+        code="SCSC"
+        title="SCSC"
+        [soon]="true"
+        backLabel="← AI Office SCSC"
+        [backQueryParams]="{ agent: 'stock' }"
+      />
 
-      @if (loading()) {
-        <app-loading-state message="Chargement agent…" />
-      } @else if (!agent()) {
-        <app-empty-state title="Agent Stock indisponible" icon="SC" />
-      } @else {
-        <app-agent-hub-card [agent]="agent()!" officeQuery="stock" />
-        <p class="callout">
-          Commandes fournisseurs et lead times à venir. Les réappro passent par recommandation agent + validation CEO.
-        </p>
-      }
+      <app-feature-agent-host
+        [agent]="agent()"
+        [loading]="loading()"
+        officeQuery="stock"
+        [sectionLabel]="'Agent dédié SCSC'"
+        officeLinkLabel="SCSC"
+      />
+
+      <p class="feature-callout">
+        Commandes fournisseurs et lead times à venir. Les réappro passent par recommandation agent + validation CEO.
+      </p>
     </div>
   `,
 })

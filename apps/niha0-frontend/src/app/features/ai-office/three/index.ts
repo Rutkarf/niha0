@@ -39,6 +39,12 @@ export {
 } from './scene-presets';
 export type { SceneVisualPreset } from './scene-presets';
 export { DESK_BY_CODE, MEZZANINE_ASSISTANTS, CEO_STAFF, TOTEM_ANIMALS, STAIRS_OBSTACLE } from './layout';
+export { OPEN_SPACE_CARPET, openSpaceCarpetBounds, isInsideOpenSpaceCarpet } from '../config/open-space-carpet';
+export { NIHAO_ROW_LAYOUTS, buildNihaoOfficeLayout, CHIEF_PLATFORM, NIHAO_ROW_GRID } from '../config/row-layout';
+export { ROW_COLORS } from '../config/colors';
+export { KEY_POSITIONS } from '../config/roles';
+export { createAgentRowDesks, createChiefDesk } from './agent-row.factory';
+export { createChiefPlatform } from './row-platform.factory';
 export { createLedPair, setLedMode, pulseLeds } from './led.factory';
 export { createTotemAnimal } from './totem.factory';
 export { createMezzanine } from './mezzanine.factory';

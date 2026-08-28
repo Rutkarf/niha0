@@ -32,8 +32,8 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
         ></button>
       }
       <app-sidebar [mobileOpen]="navOpen()" (navigate)="closeNav()" />
-      <main class="main" id="main-content">
-        <header class="topbar">
+      <main class="main" id="main-content" tabindex="-1">
+        <header class="topbar" role="banner">
           <div class="topbar-left">
             <button
               type="button"
@@ -49,6 +49,7 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
               class="ao-chip"
               [class.current]="onAiOffice()"
               title="Retour AI Office (touche O)"
+              aria-label="Retour AI Office"
             >
               <span class="ao-mark" aria-hidden="true">◈</span>
               <span class="ao-text">AI Office</span>
@@ -58,7 +59,7 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
             </a>
             <div class="topbar-title">
               <span class="pulse" aria-hidden="true"></span>
-              <span class="org">{{ tenancy.organizationName() || 'Entreprise' }}</span>
+              <span class="org">{{ tenancy.companyLabel() }}</span>
               <span class="sep">·</span>
               <span class="user-name">{{ auth.user()?.firstName }} {{ auth.user()?.lastName }}</span>
             </div>
@@ -69,14 +70,14 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
               <span aria-hidden="true">◎</span>
             </a>
             <app-approval-notifications />
-            <span class="agent-mini" title="Agents actifs">
+            <span class="agent-mini" aria-live="polite" [attr.aria-label]="agentStatusLabel()">
               {{ agents.agents().length }} agents
               @if (agents.pendingCount() > 0) {
                 <span class="pending-inline">· {{ agents.pendingCount() }} à valider</span>
               }
             </span>
             @if (auth.user(); as user) {
-              <a routerLink="/app/settings" class="user-chip" title="Paramètres">
+              <a routerLink="/app/settings" class="user-chip" title="Paramètres" aria-label="Paramètres du compte">
                 <span class="avatar" aria-hidden="true">{{ initials(user.firstName, user.lastName) }}</span>
                 <span class="meta">
                   <span class="name">{{ user.firstName }} {{ user.lastName }}</span>
@@ -87,7 +88,7 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
           </div>
         </header>
         <div class="content">
-          @if (!onAiOffice()) {
+          @if (!onAiOffice() && !onDashboard()) {
             <div class="crumbs-wrap">
               <app-breadcrumbs />
             </div>
@@ -365,6 +366,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
   private navSub?: Subscription;
 
   readonly onAiOffice = signal(false);
+  readonly onDashboard = signal(false);
   readonly navOpen = signal(false);
 
   ngOnInit(): void {
@@ -372,12 +374,19 @@ export class AppShellComponent implements OnInit, OnDestroy {
     this.agents.start();
     this.theme.hydrateFromServer();
     this.onAiOffice.set(this.router.url.includes('/app/ai-office'));
+    this.onDashboard.set(this.isDashboardRoute(this.router.url));
     this.navSub = this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
         this.onAiOffice.set(e.urlAfterRedirects.includes('/app/ai-office'));
+        this.onDashboard.set(this.isDashboardRoute(e.urlAfterRedirects));
         this.closeNav();
       });
+  }
+
+  private isDashboardRoute(url: string): boolean {
+    const path = url.split('?')[0] ?? '';
+    return path === '/app/dashboard' || path === '/app/dashboard/';
   }
 
   ngOnDestroy(): void {
@@ -388,6 +397,12 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   initials(first?: string, last?: string): string {
     return `${(first?.[0] ?? '').toUpperCase()}${(last?.[0] ?? '').toUpperCase()}` || '·';
+  }
+
+  agentStatusLabel(): string {
+    const total = this.agents.agents().length;
+    const pending = this.agents.pendingCount();
+    return pending > 0 ? `${total} agents, ${pending} validation en attente` : `${total} agents actifs`;
   }
 
   toggleNav(): void {

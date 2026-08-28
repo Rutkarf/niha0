@@ -10,6 +10,7 @@ import { ApiService } from '../../core/api/api.service';
 import type { CompanyDataAsset } from '../../core/workspace/professional.models';
 import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
 import { ToastService } from '../../shared/ui/toast/toast.service';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
 
 function formatRagEngineLabel(stats: {
   engine: string;
@@ -27,25 +28,22 @@ function formatRagEngineLabel(stats: {
 
 @Component({
   selector: 'app-company-data-page',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, RouterLink, DatePipe, FeaturePageHeaderComponent],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/workspace" class="back-ao">← Workspace</a>
-          <h1>Données de l’entreprise</h1>
-          <p>
-            Importez des fichiers texte/CSV/JSON pour indexation RAG ({{ ragChunks() }} chunk(s)).
-            @if (ragEngineLabel()) {
-              <span class="rag-engine">{{ ragEngineLabel() }}</span>
-            }
-            Les agents enrichissent leurs recommandations avec ce contexte.
-          </p>
-        </div>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        group="Système"
+        title="Données de l’entreprise"
+        backLabel="← AI Office"
+      />
+
+      <p class="feature-callout" role="note">
+        Importez des fichiers texte/CSV/JSON pour indexation RAG ({{ ragChunks() }} chunk(s)).
+        {{ ragEngineLabel() ? ragEngineLabel() + ' ' : '' }}Les agents enrichissent leurs recommandations avec ce contexte.
+      </p>
 
       <section
-        class="dropzone card"
+        class="dropzone feature-hub card"
         [class.active]="dragOver()"
         (dragover)="onDragOver($event)"
         (dragleave)="dragOver.set(false)"
@@ -68,8 +66,10 @@ function formatRagEngineLabel(stats: {
         }
       </section>
 
-      <section class="card rag-panel">
-        <h2>Recherche documentaire (RAG)</h2>
+      <section class="feature-hub card rag-panel">
+        <header class="feature-hub-head">
+          <h2 class="feature-hub-title">Recherche documentaire (RAG)</h2>
+        </header>
         <div class="toolbar">
           <input
             class="input search"
@@ -100,6 +100,7 @@ function formatRagEngineLabel(stats: {
         </ul>
       </section>
 
+      <section class="feature-hub card">
       <div class="toolbar">
         <input class="input search" placeholder="Rechercher…" [ngModel]="query()" (ngModelChange)="query.set($event)" />
         <select class="input" [ngModel]="filter()" (ngModelChange)="filter.set($event)">
@@ -156,6 +157,7 @@ function formatRagEngineLabel(stats: {
           <li class="empty">Aucun fichier importé.</li>
         }
       </ul>
+      </section>
     </div>
   `,
   styles: [`
@@ -163,7 +165,6 @@ function formatRagEngineLabel(stats: {
       padding: 2rem;
       text-align: center;
       border: 1px dashed var(--border-strong);
-      margin-bottom: 1rem;
       transition: background var(--transition), border-color var(--transition);
     }
     .dropzone.active { background: color-mix(in srgb, var(--accent-primary) 10%, transparent); }
@@ -191,7 +192,7 @@ function formatRagEngineLabel(stats: {
       color: var(--text-primary);
     }
     .error { color: var(--accent-danger); }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .search { flex: 1; min-width: 180px; }
     .file-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
     .file-item { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem; align-items: flex-start; }
@@ -199,8 +200,7 @@ function formatRagEngineLabel(stats: {
     .empty { color: var(--text-muted); padding: 1rem; }
     .form-group { margin-top: 0.55rem; max-width: 420px; }
     .download-link { font-size: 0.78rem; color: var(--accent-primary); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; }
-    .rag-panel { padding: 1rem; margin-bottom: 1rem; }
-    .rag-panel h2 { margin: 0 0 0.75rem; font-size: 0.95rem; font-family: var(--font-display); }
+    .rag-panel { padding: 0; }
     .rag-engine {
       display: inline-block;
       margin-left: 0.35rem;

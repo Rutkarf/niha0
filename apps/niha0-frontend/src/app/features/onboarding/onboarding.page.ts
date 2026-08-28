@@ -2,6 +2,8 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ProfessionalWorkspaceService } from '../../core/workspace/professional-workspace.service';
+import { CompanyLabelPipe } from '../../shared/pipes/company-label.pipe';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
 import {
   COMPANY_SIZES,
   LOGO_ACCEPT,
@@ -12,17 +14,17 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
 
 @Component({
   selector: 'app-onboarding-page',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, CompanyLabelPipe, FeaturePageHeaderComponent],
   template: `
-    <div class="page onboarding">
-      <header class="page-header">
-        <div>
-          <p class="module-code">ONBOARDING</p>
-          <h1>Espace professionnel</h1>
-          <p>Configurez votre entreprise, votre identité visuelle et le bureau 3D.</p>
-        </div>
-        <span class="soon-pill">Étape {{ step() + 1 }} / 4</span>
-      </header>
+    <div class="page feature-module-page onboarding">
+      <app-feature-page-header
+        group="Système"
+        code="ONBOARDING"
+        title="Espace professionnel"
+        backLabel="← AI Office"
+      >
+        <span chips class="soon-pill">Étape {{ step() + 1 }} / 4</span>
+      </app-feature-page-header>
 
       <nav class="steps" aria-label="Étapes d’onboarding">
         @for (label of stepLabels; track label; let i = $index) {
@@ -48,7 +50,7 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
       }
 
       @if (step() === 0) {
-        <section class="card panel" aria-labelledby="co-title">
+        <section class="feature-hub card panel" aria-labelledby="co-title">
           <h2 id="co-title" class="section-title">Informations entreprise</h2>
           <div class="grid-2">
             <div class="form-group">
@@ -97,7 +99,7 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
       }
 
       @if (step() === 1) {
-        <section class="card panel">
+        <section class="feature-hub card panel">
           <h2 class="section-title">Identité visuelle — logo</h2>
           <div class="logo-row">
             <div class="logo-preview" aria-live="polite">
@@ -125,7 +127,7 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
       }
 
       @if (step() === 2) {
-        <section class="card panel">
+        <section class="feature-hub card panel">
           <h2 class="section-title">Personnalisation 3D</h2>
           <p class="section-label">Thèmes prédéfinis</p>
           <div class="presets">
@@ -180,20 +182,20 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
           <div class="preview-swatch" [style.background]="'linear-gradient(120deg,' + ws.branding().primaryColor + ',' + ws.branding().accentColor + ')'">
             Prévisualisation · {{ ws.profile().companyName || 'Votre entreprise' }}
           </div>
-          <p class="callout">Le logo mural et le tapis seront appliqués derrière le bureau CEO dans l’AI Office après sauvegarde.</p>
+          <p class="feature-callout">Le logo mural et le tapis seront appliqués derrière le bureau CEO dans l’AI Office après sauvegarde.</p>
         </section>
       }
 
       @if (step() === 3) {
-        <section class="card panel">
+        <section class="feature-hub card panel">
           <h2 class="section-title">Confirmation</h2>
           <dl class="summary">
-            <div><dt>Entreprise</dt><dd>{{ ws.profile().companyName || '—' }}</dd></div>
+            <div><dt>Entreprise</dt><dd>{{ ws.profile().companyName | companyLabel:'—' }}</dd></div>
             <div><dt>Secteur</dt><dd>{{ ws.profile().sector || '—' }}</dd></div>
             <div><dt>Thème</dt><dd>{{ ws.branding().themePreset }}</dd></div>
             <div><dt>Logo</dt><dd>{{ ws.profile().logoUrl ? 'Chargé' : 'Initiales' }}</dd></div>
           </dl>
-          <p class="callout">Vous pourrez modifier agents, assistants et données depuis Paramètres workspace après création.</p>
+          <p class="feature-callout">Vous pourrez modifier agents, assistants et données depuis Paramètres workspace après création.</p>
           @if (saveError()) {
             <p class="error" role="alert">{{ saveError() }}</p>
           }
@@ -248,7 +250,6 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
       height: 4px;
       border-radius: 2px;
       background: var(--border-color);
-      margin-bottom: 1rem;
       overflow: hidden;
     }
     .step-fill {
@@ -265,7 +266,7 @@ import type { CarpetStyle, LogoDisplayMode } from '../../core/workspace/professi
       margin: 0 0 1rem;
       font-size: 0.85rem;
     }
-    .panel { padding: 1.25rem; margin-bottom: 1rem; }
+    .panel { padding: 0; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem; margin-top: 1rem; }
     .full { grid-column: 1 / -1; }

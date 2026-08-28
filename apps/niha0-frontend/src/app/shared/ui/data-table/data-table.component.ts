@@ -158,17 +158,7 @@ type SortDir = 'asc' | 'desc' | null;
       margin-top: var(--space-3);
     }
     .page-pos { font-size: var(--fs-sm); color: var(--text-muted); font-variant-numeric: tabular-nums; }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      border: 0;
-    }
-  `],
+`],
 })
 export class DataTableComponent<T extends Record<string, unknown>> {
   readonly columns = input.required<DataColumn<T>[]>();

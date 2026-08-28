@@ -1,7 +1,7 @@
 -- Rebrand demo org to OptimusTest / Owner Rutkarf Bzz
 
 UPDATE organizations
-SET name = 'OptimusTest',
+SET name = 'Optimus Test',
     slug = 'optimustest',
     sector = 'Services digitaux & SaaS',
     updated_at = NOW()
@@ -64,13 +64,13 @@ UPDATE agents SET
         ELSE description
     END,
     mission = CASE code
-        WHEN 'MARKETING' THEN 'Accroître la visibilité d''OptimusTest'
-        WHEN 'COMMERCIAL' THEN 'Convertir les leads en clients OptimusTest'
+        WHEN 'MARKETING' THEN 'Accroître la visibilité d''Optimus Test'
+        WHEN 'COMMERCIAL' THEN 'Convertir les leads en clients Optimus Test'
         WHEN 'ADMINISTRATIF' THEN 'Maintenir la conformité administrative'
-        WHEN 'COMPTABILITE' THEN 'Optimiser la trésorerie d''OptimusTest'
+        WHEN 'COMPTABILITE' THEN 'Optimiser la trésorerie d''Optimus Test'
         WHEN 'RELATION_CLIENT' THEN 'Améliorer la satisfaction client'
         WHEN 'JURIDIQUE' THEN 'Sécuriser les engagements documentaires'
-        WHEN 'CEO_DIRECTION' THEN 'Piloter OptimusTest et valider les actions IA'
+        WHEN 'CEO_DIRECTION' THEN 'Piloter Optimus Test et valider les actions IA'
         ELSE mission
     END
 WHERE organization_id = 'a0000000-0000-0000-0000-000000000001';

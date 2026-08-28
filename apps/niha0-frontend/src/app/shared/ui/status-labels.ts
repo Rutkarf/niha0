@@ -26,7 +26,25 @@ const LABELS: Record<string, string> = {
   PENDING: 'En attente',
   COMPLETED: 'Terminé',
   FAILED: 'Échoué',
-  CANCELLED: 'Annulé',
+  ON_LEAVE: 'En congé',
+  TERMINATED: 'Sorti',
+  ANNUAL: 'Congés payés',
+  SICK: 'Maladie',
+  UNPAID: 'Sans solde',
+  PARENTAL: 'Parental',
+  OTHER: 'Autre',
+  PUBLISHED: 'Publiée',
+  ARCHIVED: 'Archivée',
+  ORDERED: 'Commandée',
+  IN_TRANSIT: 'En transit',
+  RECEIVED: 'Réceptionnée',
+  CANCELLED: 'Annulée',
+  PLANNED: 'Planifié',
+  RUNNING: 'En cours',
+  IDLE: 'Inactif',
+  SUCCESS: 'Succès',
+  ACK: 'Accusé',
+  ERROR: 'Erreur',
 };
 
 export function statusLabel(raw: string | null | undefined): string {
@@ -66,4 +84,27 @@ export const TICKET_STATUS_OPTIONS = [
 export const INVOICE_STATUS_OPTIONS = [
   { value: 'DRAFT', label: 'Brouillon' },
   { value: 'SENT', label: 'Envoyée' },
+] as const;
+
+export const EMPLOYEE_STATUS_OPTIONS = [
+  { value: 'ACTIVE', label: 'Actif' },
+  { value: 'ON_LEAVE', label: 'En congé' },
+  { value: 'INACTIVE', label: 'Inactif' },
+  { value: 'TERMINATED', label: 'Sorti' },
+] as const;
+
+export const LEAVE_TYPE_OPTIONS = [
+  { value: 'ANNUAL', label: 'Congés payés' },
+  { value: 'SICK', label: 'Maladie' },
+  { value: 'UNPAID', label: 'Sans solde' },
+  { value: 'PARENTAL', label: 'Parental' },
+  { value: 'OTHER', label: 'Autre' },
+] as const;
+
+export const LEAVE_STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'Tous les statuts' },
+  { value: 'PENDING', label: 'En attente' },
+  { value: 'APPROVED', label: 'Approuvé' },
+  { value: 'REJECTED', label: 'Refusé' },
+  { value: 'CANCELLED', label: 'Annulé' },
 ] as const;

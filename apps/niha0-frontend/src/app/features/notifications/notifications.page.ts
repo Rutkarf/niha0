@@ -1,22 +1,21 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { DataTableComponent, DataColumn } from '../../shared/ui/data-table/data-table.component';
 import { LoadingStateComponent } from '../../shared/ui/loading-state/loading-state.component';
 import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
 
 @Component({
   selector: 'app-notifications-page',
-  imports: [DataTableComponent, LoadingStateComponent, EmptyStateComponent, RouterLink],
+  imports: [DataTableComponent, LoadingStateComponent, EmptyStateComponent, FeaturePageHeaderComponent],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/ai-office" class="back-ao">← AI Office</a>
-          <h1>Notifications</h1>
-          <p>Alertes agents et messages système</p>
-        </div>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        group="Système"
+        title="Notifications"
+        backLabel="← AI Office"
+      />
+      <section class="feature-hub card">
       @if (loading()) {
         <app-loading-state />
       } @else if (!rows().length) {
@@ -33,6 +32,7 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
           filterPlaceholder="Filtrer par titre, type, message…"
         />
       }
+      </section>
     </div>
   `,
 })

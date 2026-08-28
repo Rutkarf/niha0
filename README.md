@@ -49,7 +49,7 @@ make check   # lint + test + build
 
 | | |
 |---|---|
-| Org | OptimusTest |
+| Org | Optimus Test |
 | Owner | Rutkarf Bzz |
 | Email | `rutkarf@optimustest.fr` |
 | Mot de passe | `Demo2026!` |

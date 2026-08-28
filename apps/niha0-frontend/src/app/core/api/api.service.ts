@@ -160,6 +160,10 @@ export class ApiService {
     return this.http.post<Employee>(`${this.base}/hr/employees`, body);
   }
 
+  updateEmployee(id: string, body: Partial<Employee>): Observable<Employee> {
+    return this.http.put<Employee>(`${this.base}/hr/employees/${id}`, body);
+  }
+
   deleteEmployee(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/hr/employees/${id}`);
   }
@@ -174,6 +178,10 @@ export class ApiService {
 
   decideLeave(id: string, status: string): Observable<LeaveRequest> {
     return this.http.post<LeaveRequest>(`${this.base}/hr/leaves/${id}/decide`, { status });
+  }
+
+  deleteLeave(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/hr/leaves/${id}`);
   }
 
   getStockItems(): Observable<StockItem[]> {

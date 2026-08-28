@@ -1,0 +1,163 @@
+---
+description: Architecture Nihao — Angular + Three.js + Java. Ajouter sans supprimer, dupliquer et adapter.
+alwaysApply: true
+---
+
+# Nihao — Prompt Cursor IDE (Angular + Three.js + Java)
+
+## Objectif
+
+Développeur senior sur **NIHAO**. Mission : **ajouter** en **dupliquant et adaptant** le code existant — **jamais supprimer ni réécrire from scratch**.
+
+Stack : Angular 21 · Three.js · Spring Boot 4 / Java 21 (`com.sasurd.niha0`).
+
+---
+
+## Architecture visuelle
+
+- **10 rangées horizontales** × **5 agents** = **50 bureaux**
+- **1 plateforme supérieure** × **10 chefs** (1 chef/rangée)
+- Chaque rangée : **1 couleur unique** + **1 poste clé**
+- Alignement vertical : **Chef[i] ↔ Rangée[i]**
+- Hiérarchie Y : plateforme chefs (y élevé) > rangées agents (y = 0)
+
+---
+
+## Chemins réels du dépôt
+
+### Frontend (`apps/niha0-frontend/src/app/features/ai-office/`)
+
+| Rôle | Fichiers |
+|------|----------|
+| Page | `ai-office.page.ts` |
+| Config | `config/colors.ts`, `config/roles.ts`, `config/row-layout.ts` |
+| Models | `models/row-config.model.ts` |
+| Services | `services/nihao-row.service.ts` |
+| Composants | `components/agent-row/`, `components/chief-platform/` |
+| Three.js | `three/scene-manager.ts`, `three/layout.ts`, `three/desk.factory.ts`, `three/avatar.factory.ts`, `three/agent-row.factory.ts`, `three/row-platform.factory.ts`, `three/mezzanine.factory.ts` |
+
+**Legacy conservé** : 11 bureaux (`DESK_BY_CODE`), CEO (`CEO_POS`), mezzanine, totems — ne pas supprimer.
+
+### Backend (`apps/niha0-backend/src/main/java/com/sasurd/niha0/`)
+
+| Rôle | Fichiers |
+|------|----------|
+| Agents (existant) | `agents/AgentController.java` — **ne pas modifier les endpoints existants** |
+| Layout Nihao (additif) | `office/OfficeLayoutController.java`, `office/OfficeLayoutService.java` |
+
+API : context-path `/api` — ex. `GET /api/nihao/office/layout`, `GET /api/agents`.
+
+---
+
+## Règles de développement
+
+### 1. Analyse préalable OBLIGATOIRE
+
+- Rechercher composants/factories similaires
+- Identifier patterns dans `scene-manager.ts` et `layout.ts`
+- Vérifier contrôleurs Java et DTOs
+- Lister fichiers avec chemins complets
+- **Uniquement ajouter**
+
+### 2. Duplication
+
+- Dupliquer composant/factory le plus proche
+- Adapter couleur, poste, position (x, y, z)
+- Ajouter endpoints Java sans toucher aux existants
+- Mettre à jour configs — **ajouter des entrées**
+
+### 3. Contraintes
+
+**Angular** : standalone components ; services existants ; pas de nouveaux modules sauf nécessité.
+
+**Three.js** : réutiliser scène/caméra/renderer ; dupliquer meshes ; respecter `layout.ts` et `row-layout.ts`.
+
+**Java** : ne jamais supprimer d'endpoints ; patterns Spring Boot ; DTOs records.
+
+### 4. Hiérarchie
+
+```
+Plateforme chefs (y élevé) > Rangées agents (y = 0)
+Chef[i].x ≈ centre X de Rangée[i]
+5 agents/rangée le long de X
+```
+
+---
+
+## Configuration
+
+```typescript
+// config/colors.ts
+export const ROW_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', ...];
+
+// config/roles.ts
+export const KEY_POSITIONS = ['Accueil', 'Support', 'Vente', ...];
+
+// config/row-layout.ts → NIHAO_ROW_LAYOUTS (10 × 5 + 10 chefs)
+```
+
+```java
+// office/OfficeLayoutController.java — ADDITIF
+@GetMapping("/layout") public OfficeLayoutDto layout();
+@GetMapping("/rows") public List<RowLayoutDto> rows();
+@GetMapping("/chiefs") public List<ChiefConfigDto> chiefs();
+```
+
+---
+
+## Workflow
+
+### Étape 1 — Planification
+
+Plan listant fichiers à dupliquer, factories Three.js, contrôleurs à étendre, ordre d'implémentation, tests à conserver.
+
+### Étape 2 — Implémentation
+
+1. Backend Java (DTO, service, controller **additif**)
+2. Services Angular
+3. Composants / factories
+4. Scène Three.js (`spawnNihaoRowLayout()` dans `scene-manager.ts`)
+5. Tests
+
+### Étape 3 — Validation
+
+- ✓ 50 agents (10 × 5)
+- ✓ 10 chefs sur plateforme
+- ✓ Alignements Chef[i] ↔ Rangée[i]
+- ✓ 10 couleurs + 10 postes clés
+- ✓ Aucun fichier supprimé
+- ✓ Tests passent
+
+---
+
+## Interdictions strictes
+
+- ❌ Supprimer fichiers, composants, scènes, endpoints
+- ❌ Réécrire from scratch
+- ❌ Modifier composants existants (dupliquer)
+- ❌ Ignorer alignement chef ↔ rangée
+- ❌ Déplacer `CEO_POS` ou supprimer les 11 bureaux legacy
+- ❌ Nouveaux patterns architecturaux ou dépendances sans validation
+
+---
+
+## Usage Cursor
+
+- Règle active : `alwaysApply: true`
+- Référence : `@nihao-architecture`
+- Première interaction : FRD listant fichiers à dupliquer
+- Itération : « Implémente rangée N — duplique sans supprimer »
+- Debug : sélecteur Angular → import → mesh Three.js → endpoint Java
+
+---
+
+## Checklist finale
+
+- [ ] Aucun fichier supprimé
+- [ ] Composants/factories dupliqués
+- [ ] Scène Three.js enrichie (ajout)
+- [ ] Endpoints Java additifs
+- [ ] Alignement vertical respecté
+- [ ] 10 couleurs + 10 postes clés
+- [ ] Tests existants + nouveaux passent
+- [ ] `make lint` / `make test` OK

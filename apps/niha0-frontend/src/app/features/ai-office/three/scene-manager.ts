@@ -31,11 +31,15 @@ import {
   CEO_POS as CEO_LAYOUT,
   DESK_BY_CODE,
   DESK_POSITIONS,
-  STAIRS_OBSTACLE,
   TOTEM_ANIMALS,
 } from './layout';
 import { createLedPair, pulseLeds, setLedMode, tickLedPair } from './led.factory';
-import { createMezzanine, createMezzanineAssistants, type ScenicRuntime } from './mezzanine.factory';
+import type { ScenicRuntime } from './mezzanine.factory';
+import { NIHAO_ROW_LAYOUTS, resolveRowDeskCode } from '../config/row-layout';
+import { buildNihaoLedLayout, ledModeForAgentStatus, type NihaoLedSnapshot } from '../config/agent-desk-led';
+import { createAgentRowDesks, createChiefDesk, isChiefDeskFacingRow, type RowAgentRuntime } from './agent-row.factory';
+import { setDeskLabelVisible } from './desk-nameplate.factory';
+import { createChiefPlatform } from './row-platform.factory';
 import { createTotemAnimal, tickTotem } from './totem.factory';
 import {
   resolveAgentVisualStatus,
@@ -52,6 +56,12 @@ import {
 import { createDataLibrary, setLibraryVisualState } from './library.factory';
 import { buildOfficeEnvironment } from './office-builder';
 import { accentForCode, getPalette } from './theme-palette';
+import {
+  RENDER_PERF,
+  resolvePixelRatio,
+  shouldDisableShadows,
+  stripCastShadows,
+} from './render-performance';
 import { applyPresetPalette, loadScenePreset } from './scene-presets';
 import type { AgentDeskConfig, AvatarState, ScenePalette, SceneTheme } from './types';
 import { createComicDialoguePair } from './ui/comic-dialogue.factory';
@@ -121,8 +131,8 @@ interface LibraryRuntime {
   group: THREE.Group;
 }
 
-type PickKind = 'agent' | 'library' | 'ceo' | 'bell' | 'scenic' | 'centralizer' | 'totem';
-type SelectKind = 'agent' | 'ceo' | 'library' | 'bell';
+type PickKind = 'agent' | 'library' | 'ceo' | 'bell' | 'scenic' | 'centralizer' | 'totem' | 'row-desk';
+type SelectKind = 'agent' | 'ceo' | 'library' | 'bell' | 'row-desk';
 type SelectCallback = (kind: SelectKind, id?: string) => void;
 type ApprovalSceneCallback = (event: 'agent-moving' | 'agent-at-door' | 'bell-click', agentId?: string) => void;
 type TooltipCallback = (payload: SceneTooltipPayload) => void;
@@ -140,6 +150,10 @@ export class OfficeSceneManager {
   private agents: AgentRuntime[] = [];
   private libraries: LibraryRuntime[] = [];
   private scenic: ScenicRuntime[] = [];
+  private rowAgents: RowAgentRuntime[] = [];
+  private nihaoLedSnapshot: NihaoLedSnapshot | null = null;
+  private fpsFrameCount = 0;
+  private fpsAccumMs = 0;
   private centralizers: CentralizerRuntime[] = [];
   private totems: THREE.Group[] = [];
   private ceoGroup: THREE.Group | null = null;
@@ -183,8 +197,10 @@ export class OfficeSceneManager {
   private hoveredAgentId: string | null = null;
   private hoveredLibraryId: string | null = null;
   private hoveredScenicId: string | null = null;
+  private hoveredRowDeskId: string | null = null;
   private selectedAgentId: string | null = null;
   private selectedLibraryId: string | null = null;
+  private selectedRowDeskId: string | null = null;
   private keyboardFocusIndex = 0;
 
   private resizeObserver: ResizeObserver | null = null;
@@ -211,7 +227,11 @@ export class OfficeSceneManager {
 
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+      renderer = new THREE.WebGLRenderer({
+        antialias: RENDER_PERF.antialias,
+        alpha: false,
+        powerPreference: 'high-performance',
+      });
       const gl = renderer.getContext();
       if (!gl) throw new Error('WebGL context unavailable');
     } catch (err) {
@@ -219,10 +239,9 @@ export class OfficeSceneManager {
     }
 
     this.renderer = renderer;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    const lowShadowBudget =
-      window.matchMedia('(max-width: 900px)').matches || window.devicePixelRatio >= 2.5;
-    renderer.shadowMap.enabled = !lowShadowBudget;
+    renderer.setPixelRatio(resolvePixelRatio(RENDER_PERF.maxPixelRatio));
+    const shadowsOff = shouldDisableShadows(RENDER_PERF);
+    renderer.shadowMap.enabled = !shadowsOff;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -369,6 +388,12 @@ export class OfficeSceneManager {
     }
   }
 
+  /** Met à jour les LEDs Nihao — vert autonome, rouge validation humaine. */
+  syncNihaoLeds(snapshot: NihaoLedSnapshot): void {
+    this.nihaoLedSnapshot = snapshot;
+    this.applyNihaoLeds();
+  }
+
   /** Animate camera toward an agent desk by code or id. */
   focusAgent(codeOrId: string): void {
     const runtime = this.agents.find(
@@ -377,8 +402,10 @@ export class OfficeSceneManager {
     if (!runtime || !this.camera) return;
     this.selectedAgentId = runtime.config.id;
     this.selectedLibraryId = null;
+    this.selectedRowDeskId = null;
     this.syncKeyboardIndexToSelection();
     this.applySelectionVisuals();
+    this.applyRowDeskVisuals();
     this.lookAtTarget.set(runtime.home.x, 1.2, runtime.home.z);
     const dx = runtime.home.x;
     const dz = runtime.home.z;
@@ -410,8 +437,10 @@ export class OfficeSceneManager {
     if (!runtime || !this.camera) return;
     this.selectedLibraryId = runtime.entity.id;
     this.selectedAgentId = null;
+    this.selectedRowDeskId = null;
     this.syncKeyboardIndexToSelection();
     this.applySelectionVisuals();
+    this.applyRowDeskVisuals();
     const [x, , z] = runtime.entity.position3D;
     this.lookAtTarget.set(x, 1.4, z);
     this.targetYaw = Math.atan2(x * 0.12, 14);
@@ -421,6 +450,77 @@ export class OfficeSceneManager {
       Math.sin(this.yaw) * this.focusOrbitRadius + this.lookAtTarget.x * 0.12,
       Math.max(6, this.focusOrbitRadius * 0.5),
       Math.cos(this.yaw) * this.focusOrbitRadius + this.lookAtTarget.z * 0.12,
+    );
+    if (this.reducedMotion) {
+      this.lookAtCurrent.copy(this.lookAtTarget);
+      this.camera.position.copy(this.desiredCameraPos);
+      if (this.controls) {
+        this.controls.target.copy(this.lookAtTarget);
+        this.controls.update();
+      }
+      this.desiredCameraPos = null;
+    }
+  }
+
+  /** Cadre la caméra sur un bureau Nihao (code R{n}A{m}). */
+  focusRowDesk(rowDeskId: string): void {
+    const runtime = this.rowAgents.find((r) => r.id === rowDeskId);
+    if (!runtime || !this.camera) return;
+    this.setSelectedRowDesk(rowDeskId);
+    const world = new THREE.Vector3();
+    runtime.desk.getWorldPosition(world);
+    this.lookAtTarget.set(world.x, 1.2, world.z);
+    const dx = world.x;
+    const dz = world.z;
+    this.targetYaw = Math.atan2(dx * 0.12, 12);
+    this.yaw = this.targetYaw;
+    const focus = Math.hypot(dx, dz) * 0.5 + 9;
+    this.focusOrbitRadius = Math.max(
+      this.minOrbitRadius,
+      Math.min(this.maxOrbitRadius * 0.5, Math.max(9, Math.min(15, focus))),
+    );
+    this.desiredCameraPos = new THREE.Vector3(
+      Math.sin(this.yaw) * this.focusOrbitRadius + this.lookAtTarget.x * 0.12,
+      Math.max(5.8, this.focusOrbitRadius * 0.46),
+      Math.cos(this.yaw) * this.focusOrbitRadius + this.lookAtTarget.z * 0.12,
+    );
+    if (this.reducedMotion) {
+      this.lookAtCurrent.copy(this.lookAtTarget);
+      this.camera.position.copy(this.desiredCameraPos);
+      if (this.controls) {
+        this.controls.target.copy(this.lookAtTarget);
+        this.controls.update();
+      }
+      this.desiredCameraPos = null;
+    }
+  }
+
+  /** Cadre la caméra sur le chef d'une équipe Nihao. */
+  focusChief(rowId: number): void {
+    const scenic = this.scenic.find((s) => s.id === `CHIEF-R${rowId}`);
+    if (!scenic || !this.camera) return;
+    this.selectedAgentId = null;
+    this.selectedLibraryId = null;
+    this.selectedRowDeskId = null;
+    this.hoveredScenicId = scenic.id;
+    this.applySelectionVisuals();
+    this.applyRowDeskVisuals();
+    const world = new THREE.Vector3();
+    scenic.group.getWorldPosition(world);
+    this.lookAtTarget.set(world.x, 1.35, world.z);
+    const dx = world.x;
+    const dz = world.z;
+    this.targetYaw = Math.atan2(dx * 0.1, 11);
+    this.yaw = this.targetYaw;
+    const focus = Math.hypot(dx, dz) * 0.45 + 10;
+    this.focusOrbitRadius = Math.max(
+      this.minOrbitRadius,
+      Math.min(this.maxOrbitRadius * 0.48, Math.max(10, Math.min(16, focus))),
+    );
+    this.desiredCameraPos = new THREE.Vector3(
+      Math.sin(this.yaw) * this.focusOrbitRadius + this.lookAtTarget.x * 0.1,
+      Math.max(6.2, this.focusOrbitRadius * 0.5),
+      Math.cos(this.yaw) * this.focusOrbitRadius + this.lookAtTarget.z * 0.1,
     );
     if (this.reducedMotion) {
       this.lookAtCurrent.copy(this.lookAtTarget);
@@ -540,6 +640,7 @@ export class OfficeSceneManager {
     this.agents = [];
     this.libraries = [];
     this.scenic = [];
+    this.rowAgents = [];
     this.centralizers = [];
     this.totems = [];
     this.ceoGroup = null;
@@ -618,6 +719,7 @@ export class OfficeSceneManager {
     this.agents = [];
     this.libraries = [];
     this.scenic = [];
+    this.rowAgents = [];
     this.centralizers = [];
     this.totems = [];
     this.ceoGroup = null;
@@ -635,63 +737,13 @@ export class OfficeSceneManager {
     this.scene.add(this.ceoGroup);
   }
 
-  private spawnAgents(agents: AgentDeskConfig[]): void {
-    if (!this.scene) return;
+  /**
+   * Les 11 agents legacy (CRM, VENTES, …) ne sont plus rendus au sol :
+   * seuls les 40 bureaux Nihao sur le tapis vert sont affichés en 3D.
+   * DESK_BY_CODE reste disponible pour données / pathfinding / tests.
+   */
+  private spawnAgents(_agents: AgentDeskConfig[]): void {
     this.agents = [];
-    const list = agents.slice(0, 11);
-    list.forEach((cfg, i) => {
-      const fromCode = DESK_BY_CODE[cfg.code];
-      const [x, y, z] = fromCode
-        ? ([fromCode[0], 0, fromCode[1]] as [number, number, number])
-        : (DESK_POSITIONS[i] ?? DESK_POSITIONS[0]);
-      const accent = accentForCode(cfg.code);
-      const desk = createAgentDesk(cfg.name || cfg.code, accent, this.palette, cfg.code);
-      desk.position.set(x, y, z);
-      desk.userData['type'] = 'desk';
-      desk.userData['agentId'] = cfg.id;
-      this.scene!.add(desk);
-
-      const avatar = createCartoonAvatar(cfg.code, accent);
-      const home = new THREE.Vector3(x, 0, z + 0.55);
-      avatar.position.copy(home);
-      avatar.userData['agentId'] = cfg.id;
-      avatar.userData['type'] = 'avatar';
-      this.scene!.add(avatar);
-
-      const leds = createLedPair(cfg.id);
-      leds.position.set(0, 1.52, 0);
-      avatar.add(leds);
-
-      const focusRing = createFocusRing(cfg.id, accent);
-      focusRing.position.set(x, focusRing.position.y, z);
-      this.scene!.add(focusRing);
-
-      const runtime: AgentRuntime = {
-        config: cfg,
-        desk,
-        avatar,
-        focusRing,
-        home: home.clone(),
-        state: 'SEATED',
-        path: [],
-        pathIndex: 0,
-        walkT: 0,
-        taskBubble: null,
-        dialogueAgent: null,
-        dialogueCeo: null,
-        approvalMarker: null,
-        leds,
-      };
-
-      this.updateAgentRingAccent(runtime);
-
-      if (cfg.status === 'WAITING_APPROVAL') {
-        this.beginWalkToCeo(runtime);
-      }
-      this.syncBubblesForAgent(runtime);
-
-      this.agents.push(runtime);
-    });
   }
 
   private spawnLibraries(): void {
@@ -711,16 +763,13 @@ export class OfficeSceneManager {
   private spawnScenicWorld(): void {
     if (!this.scene) return;
     this.scenic = [];
+    this.rowAgents = [];
     this.centralizers = [];
     this.totems = [];
 
-    const mezz = createMezzanine(this.palette, this.theme);
-    this.scene.add(mezz);
+    this.spawnNihaoRowLayout();
 
-    for (const runtime of [
-      ...createMezzanineAssistants(this.palette),
-      ...createCeoStaffAssistants(this.palette),
-    ]) {
+    for (const runtime of createCeoStaffAssistants(this.palette)) {
       this.scene.add(runtime.group);
       this.scenic.push(runtime);
     }
@@ -735,10 +784,52 @@ export class OfficeSceneManager {
       this.scene.add(animal);
       this.totems.push(animal);
     }
+    this.applyNihaoLeds();
+  }
+
+  /** 10 rangées × 4 agents + plateforme 10 chefs — ajout sans supprimer l'existant. */
+  private spawnNihaoRowLayout(): void {
+    if (!this.scene) return;
+    this.rowAgents = [];
+
+    const platform = createChiefPlatform(this.palette, this.theme);
+    if (!RENDER_PERF.nihaoCastShadow) {
+      stripCastShadows(platform);
+    }
+    this.scene.add(platform);
+
+    for (const row of NIHAO_ROW_LAYOUTS) {
+      for (const runtime of createAgentRowDesks(row, this.palette)) {
+        this.scene.add(runtime.desk);
+        this.scene.add(runtime.clickZone);
+        this.scene.add(runtime.focusRing);
+        this.rowAgents.push(runtime);
+      }
+
+      const chief = createChiefDesk(row, this.palette);
+      this.scene.add(chief.group);
+      this.scenic.push({
+        id: chief.id,
+        name: row.chief.title,
+        role: `${row.role} — ${row.chief.title}`,
+        group: chief.group,
+        avatar: chief.avatar,
+        leds: chief.leds,
+      });
+    }
+  }
+
+  setSelectedRowDesk(rowDeskId: string | null): void {
+    this.selectedRowDeskId = rowDeskId;
+    if (rowDeskId) {
+      this.selectedAgentId = null;
+      this.selectedLibraryId = null;
+    }
+    this.applyRowDeskVisuals();
   }
 
   private navObstacles(): ReturnType<typeof activeDoorObstacles> {
-    return activeDoorObstacles(this.isCeoDoorBlocking(), CEO_DOOR_OBSTACLE, [STAIRS_OBSTACLE]);
+    return activeDoorObstacles(this.isCeoDoorBlocking(), CEO_DOOR_OBSTACLE, []);
   }
 
   private beginWalkToCeo(runtime: AgentRuntime): void {
@@ -1089,6 +1180,10 @@ export class OfficeSceneManager {
       this.syncAgentLeds(runtime);
       tickLedPair(runtime.leds, t, this.reducedMotion);
     }
+    this.applyNihaoLeds();
+    for (const runtime of this.rowAgents) {
+      tickLedPair(runtime.leds, t, this.reducedMotion);
+    }
 
     // CEO office door, bell, avatar states
     if (this.ceoDoorParts && this.ceoOfficeState) {
@@ -1142,6 +1237,17 @@ export class OfficeSceneManager {
     }
 
     this.renderer.render(this.scene, this.camera);
+
+    if (RENDER_PERF.fpsLogIntervalFrames > 0) {
+      this.fpsAccumMs += dt * 1000;
+      this.fpsFrameCount += 1;
+      if (this.fpsFrameCount >= RENDER_PERF.fpsLogIntervalFrames) {
+        const avgFps = (this.fpsFrameCount / this.fpsAccumMs) * 1000;
+        console.debug(`[nihao-3d] avg FPS: ${avgFps.toFixed(1)}`);
+        this.fpsFrameCount = 0;
+        this.fpsAccumMs = 0;
+      }
+    }
   };
 
   private updateAgent(runtime: AgentRuntime, dt: number, t: number): void {
@@ -1305,14 +1411,30 @@ export class OfficeSceneManager {
         pulseObjectClick(runtime.desk, this.reducedMotion);
         pulseObjectClick(runtime.avatar, this.reducedMotion);
         pulseLeds(runtime.leds);
-        setLedMode(runtime.leds, 'green');
       }
       this.selectedAgentId = hit.id;
       this.selectedLibraryId = null;
+      this.selectedRowDeskId = null;
       this.syncKeyboardIndexToSelection();
       this.applySelectionVisuals();
+      this.applyRowDeskVisuals();
       this.focusAgent(hit.id);
       this.selectCb('agent', hit.id);
+      return;
+    }
+    if (hit.kind === 'row-desk' && hit.id) {
+      const runtime = this.rowAgents.find((r) => r.id === hit.id);
+      if (runtime) {
+        pulseObjectClick(runtime.desk, this.reducedMotion);
+        pulseObjectClick(runtime.avatar, this.reducedMotion);
+        pulseLeds(runtime.leds);
+      }
+      this.selectedRowDeskId = hit.id;
+      this.selectedAgentId = null;
+      this.selectedLibraryId = null;
+      this.applySelectionVisuals();
+      this.applyRowDeskVisuals();
+      this.selectCb('row-desk', hit.id);
       return;
     }
     if (hit.kind === 'scenic' && hit.id) {
@@ -1320,7 +1442,6 @@ export class OfficeSceneManager {
       if (scenic) {
         pulseObjectClick(scenic.group, this.reducedMotion);
         pulseLeds(scenic.leds);
-        setLedMode(scenic.leds, 'both');
       }
       this.hoveredScenicId = hit.id;
       return;
@@ -1444,10 +1565,12 @@ export class OfficeSceneManager {
     const hit = this.pickInteractive(clientX, clientY);
     let nextAgent: string | null = null;
     let nextLib: string | null = null;
+    let nextRowDesk: string | null = null;
     const nextCeo = hit?.kind === 'ceo';
     const nextBell = hit?.kind === 'bell';
     if (hit?.kind === 'agent') nextAgent = hit.id ?? null;
     if (hit?.kind === 'library') nextLib = hit.id ?? null;
+    if (hit?.kind === 'row-desk') nextRowDesk = hit.id ?? null;
     const nextScenic = hit?.kind === 'scenic' ? hit.id ?? null : null;
 
     this.emitTooltip(hit, clientX, clientY);
@@ -1455,6 +1578,7 @@ export class OfficeSceneManager {
     const pointerHit =
       !!nextAgent ||
       !!nextLib ||
+      !!nextRowDesk ||
       nextCeo ||
       nextBell ||
       !!nextScenic ||
@@ -1465,6 +1589,7 @@ export class OfficeSceneManager {
     if (
       nextAgent === this.hoveredAgentId &&
       nextLib === this.hoveredLibraryId &&
+      nextRowDesk === this.hoveredRowDeskId &&
       nextScenic === this.hoveredScenicId &&
       nextCeo === this.hoveredCeo &&
       nextBell === this.bellHovered
@@ -1474,6 +1599,7 @@ export class OfficeSceneManager {
 
     this.hoveredAgentId = nextAgent;
     this.hoveredLibraryId = nextLib;
+    this.hoveredRowDeskId = nextRowDesk;
     this.hoveredScenicId = nextScenic;
     this.bellHovered = nextBell;
     if (nextCeo !== this.hoveredCeo) {
@@ -1481,6 +1607,7 @@ export class OfficeSceneManager {
       if (this.ceoGroup) setEmissiveBoost(this.ceoGroup, nextCeo);
     }
     this.applySelectionVisuals();
+    this.applyRowDeskVisuals();
   }
 
   private emitTooltip(
@@ -1508,6 +1635,29 @@ export class OfficeSceneManager {
         kind: 'agent',
         title: name,
         subtitle: statusLabelFr(visual),
+        ndcX,
+        ndcY,
+        visible: true,
+      });
+      return;
+    }
+    if (hit.kind === 'row-desk' && hit.id) {
+      const runtime = this.rowAgents.find((r) => r.id === hit.id);
+      const resolved = resolveRowDeskCode(hit.id);
+      const jobTitle =
+        runtime?.label ??
+        (runtime?.avatar.userData['jobTitle'] as string | undefined) ??
+        resolved?.title ??
+        'Bureau agent';
+      const pole =
+        runtime?.role ??
+        (runtime?.avatar.userData['department'] as string | undefined) ??
+        resolved?.pole ??
+        '';
+      this.tooltipCb({
+        kind: 'agent',
+        title: jobTitle,
+        subtitle: pole ? `${pole} · ${jobTitle}` : 'Bureau agent',
         ndcX,
         ndcY,
         visible: true,
@@ -1604,6 +1754,9 @@ export class OfficeSceneManager {
     for (const a of this.agents) {
       targets.push(a.focusRing, a.desk, a.avatar);
     }
+    for (const r of this.rowAgents) {
+      targets.push(r.clickZone, r.focusRing, r.desk, r.avatar);
+    }
     for (const lib of this.libraries) {
       targets.push(lib.group);
     }
@@ -1641,6 +1794,9 @@ export class OfficeSceneManager {
       if (obj.userData['type'] === 'totem') {
         return { kind: 'totem', id: obj.userData['totemKind'] as string };
       }
+      if (obj.userData['rowDeskId']) {
+        return { kind: 'row-desk', id: obj.userData['rowDeskId'] as string };
+      }
       if (obj.userData['agentId']) {
         return { kind: 'agent', id: obj.userData['agentId'] as string };
       }
@@ -1675,6 +1831,39 @@ export class OfficeSceneManager {
     }
   }
 
+  private applyRowDeskVisuals(): void {
+    for (const runtime of this.rowAgents) {
+      const state =
+        runtime.id === this.selectedRowDeskId
+          ? 'selected'
+          : runtime.id === this.hoveredRowDeskId
+            ? 'hover'
+            : 'idle';
+      setFocusRingState(runtime.focusRing, state, this.clock.elapsedTime, {
+        reducedMotion: this.reducedMotion,
+      });
+      const zoneMat = runtime.clickZone.material;
+      if (zoneMat instanceof THREE.MeshBasicMaterial) {
+        zoneMat.opacity =
+          state === 'selected' ? 0.38 : state === 'hover' ? 0.32 : 0.22;
+      }
+      setDeskLabelVisible(runtime.hoverLabel, state === 'hover' || state === 'selected');
+    }
+    this.applyScenicHoverLabels();
+  }
+
+  private applyScenicHoverLabels(): void {
+    for (const scenic of this.scenic) {
+      let label: THREE.Sprite | null = null;
+      scenic.group.traverse((obj) => {
+        if (obj.name === 'desk-hover-label' && obj instanceof THREE.Sprite) {
+          label = obj;
+        }
+      });
+      setDeskLabelVisible(label, scenic.id === this.hoveredScenicId);
+    }
+  }
+
   private updateAgentRingAccent(runtime: AgentRuntime): void {
     const accent = accentForCode(runtime.config.code);
     const visual = resolveAgentVisualStatus(runtime.config.status);
@@ -1682,17 +1871,34 @@ export class OfficeSceneManager {
   }
 
   private syncAgentLeds(runtime: AgentRuntime): void {
-    if (runtime.config.status === 'WAITING_APPROVAL' || runtime.state === 'WAITING_AT_CEO') {
+    if (runtime.state === 'WAITING_AT_CEO' || runtime.state === 'WALKING_TO_CEO') {
       setLedMode(runtime.leds, 'red');
       return;
     }
-    if (runtime.config.id === this.selectedAgentId) {
-      setLedMode(runtime.leds, 'green');
-      return;
+    const pending = this.nihaoLedSnapshot?.pendingAgentIds.has(runtime.config.id) ?? false;
+    setLedMode(runtime.leds, ledModeForAgentStatus(runtime.config.status, pending));
+  }
+
+  private applyNihaoLeds(): void {
+    const layout = buildNihaoLedLayout(
+      this.nihaoLedSnapshot ?? { agents: [], pendingAgentIds: new Set() },
+    );
+
+    for (const runtime of this.rowAgents) {
+      const mode = layout.rowDesks.get(runtime.id) ?? 'green';
+      setLedMode(runtime.leds, mode);
     }
-    const pulseUntil = (runtime.leds.userData['pulseUntil'] as number) ?? 0;
-    if (performance.now() < pulseUntil) return;
-    setLedMode(runtime.leds, 'off');
+
+    for (const scenic of this.scenic) {
+      if (scenic.id.startsWith('CHIEF-R')) {
+        const rowId = Number(scenic.id.slice('CHIEF-R'.length));
+        const mode = layout.chiefs.get(rowId) ?? 'green';
+        setLedMode(scenic.leds, mode);
+        continue;
+      }
+      const mode = layout.scenic.get(scenic.id) ?? 'green';
+      setLedMode(scenic.leds, mode);
+    }
   }
 
   private applyHomeFraming(preserveFocus = false): void {

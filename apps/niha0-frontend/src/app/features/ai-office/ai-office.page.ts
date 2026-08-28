@@ -37,6 +37,9 @@ import { CeoApprovalService } from '../../core/approval/ceo-approval.service';
 import type { CeoOfficeOptions } from './three/desk.factory';
 import type { SceneTooltipPayload } from './three/interaction-feedback';
 import { loadScenePreset } from './three/scene-presets';
+import { companyLabel, normalizeCompanyName } from '../../core/tenancy/company-label';
+import { NIHAO_ROW_LAYOUTS } from './config/row-layout';
+import type { RowDeskSelection } from './models/row-config.model';
 
 const DESK_CODES = [
   'CRM',
@@ -117,7 +120,7 @@ function agentInitials(name: string): string {
       <header class="office-header">
         <div class="header-copy">
           <p class="eyebrow">AI Office / Command Center</p>
-          <h1>{{ workspace.profile().companyName || workspace.office().workspaceName || 'AI Office NIHAO' }}</h1>
+          <h1>{{ companyDisplayLabel() || 'AI Office Nihao' }}</h1>
           <p class="sub">
             11 agents IA · bureau CEO · open-space
             <span class="demo-engine" [title]="aiEngineDemo() ? 'Recommandations mock / fallback' : 'Moteur LLM branché'">
@@ -253,6 +256,26 @@ function agentInitials(name: string): string {
         </div>
       }
 
+      @if (selectedRowDesk(); as desk) {
+        <div class="panel-overlay" (click)="closePanels()">
+          <aside
+            class="panel-slide"
+            (click)="$event.stopPropagation()"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="row-desk-panel-title"
+          >
+            <button type="button" class="close" (click)="closePanels()" aria-label="Fermer le panneau bureau">×</button>
+            <p class="eyebrow">Équipe {{ desk.role }} · Chef : {{ desk.chiefTitle }}</p>
+            <h2 id="row-desk-panel-title">{{ desk.label }}</h2>
+            <span class="team-swatch" [style.background]="desk.color" aria-hidden="true"></span>
+            <p class="agent-desc">Agent IA — poste clé de l'équipe {{ desk.role }}.</p>
+            <p class="etat">LED verte : action validée au poste · LED rouge : confirmation humaine requise</p>
+            <button type="button" class="btn btn-primary" (click)="closePanels()">Retour à la scène</button>
+          </aside>
+        </div>
+      }
+
       @if (selectedAgent(); as agent) {
         <div class="panel-overlay" (click)="closePanels()">
           <aside
@@ -290,7 +313,7 @@ function agentInitials(name: string): string {
             aria-labelledby="ceo-panel-title"
           >
             <button type="button" class="close" (click)="closePanels()" aria-label="Fermer le panneau CEO">×</button>
-            <p class="eyebrow">{{ ownerRoleLabel() }} — {{ workspace.profile().companyName || 'Entreprise' }}</p>
+            <p class="eyebrow">{{ ownerRoleLabel() }} — {{ companyDisplayLabel() || 'Société : Entreprise' }}</p>
             <h2 id="ceo-panel-title">{{ ownerLabel() }}</h2>
             <p class="sub">NIHAO Command Center</p>
             <div class="comic-box" aria-live="polite">
@@ -622,6 +645,13 @@ function agentInitials(name: string): string {
       align-items: center;
       margin-bottom: 0.75rem;
     }
+    .team-swatch {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 50%;
+      margin: 0.35rem 0 0.5rem;
+    }
     .avatar-circle {
       width: 2.6rem;
       height: 2.6rem;
@@ -849,18 +879,7 @@ function agentInitials(name: string): string {
     }
     .onboard-steps li { margin-bottom: 0.45rem; }
     .onboard-steps strong { color: var(--text-primary); }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-    @media (max-width: 900px) {
+@media (max-width: 900px) {
       .office-header { padding: 0.5rem 0.75rem; }
       .header-actions { width: 100%; justify-content: flex-start; }
       .canvas-wrap { min-height: 260px; }
@@ -902,6 +921,7 @@ export class AiOfficePage implements OnInit, OnDestroy {
   readonly errorMessage = signal<string | null>(null);
   readonly agents = signal<Agent[]>([]);
   readonly selectedAgent = signal<Agent | null>(null);
+  readonly selectedRowDesk = signal<RowDeskSelection | null>(null);
   readonly selectedLibrary = signal<WorkspaceEntity | null>(null);
   readonly ceoPanelOpen = signal(false);
   readonly useFallback = signal(false);
@@ -942,7 +962,7 @@ export class AiOfficePage implements OnInit, OnDestroy {
   readonly showSceneTooltip = computed(() => {
     const tip = this.sceneTooltip();
     if (!tip.visible) return false;
-    if (this.selectedAgent() || this.selectedLibrary() || this.ceoPanelOpen() || this.showOnboarding()) {
+    if (this.selectedAgent() || this.selectedRowDesk() || this.selectedLibrary() || this.ceoPanelOpen() || this.showOnboarding()) {
       return false;
     }
     return true;
@@ -954,7 +974,9 @@ export class AiOfficePage implements OnInit, OnDestroy {
       const profile = this.workspace.profile();
       const user = this.authUser.user();
       return {
-        companyName: profile.companyName || user?.organizationName || 'Entreprise',
+        companyName: normalizeCompanyName(
+          profile.companyName || user?.organizationName || 'Entreprise',
+        ) || 'Entreprise',
         ownerLabel: user ? `${user.firstName} ${user.lastName}` : 'CEO',
         branding: this.workspace.branding(),
         logoUrl: profile.logoUrl,
@@ -985,8 +1007,19 @@ export class AiOfficePage implements OnInit, OnDestroy {
   private actionsHydrated = false;
 
   readonly loadingMessage = computed(
-    () => `Ouverture de la salle ${this.workspace.profile().companyName || 'NIHAO'}…`,
+    () => `Ouverture de la salle ${this.companyDisplayLabel() || 'Nihao'}…`,
   );
+
+  readonly companyDisplayLabel = computed(() => {
+    const profile = this.workspace.profile();
+    const user = this.authUser.user();
+    const raw =
+      profile.companyName ||
+      user?.organizationName ||
+      this.workspace.office().workspaceName ||
+      '';
+    return raw ? companyLabel(raw) : '';
+  });
   readonly displayLoadingMessage = computed(() =>
     this.loadingLong()
       ? `${this.loadingMessage()} Préparation de la scène 3D…`
@@ -1023,25 +1056,32 @@ export class AiOfficePage implements OnInit, OnDestroy {
       const state = this.ceoApproval.officeState();
       untracked(() => this.sceneManager?.setCeoOfficeState(state));
     });
+    // LEDs Nihao — vert autonome / rouge validation humaine.
+    effect(() => {
+      const pending = this.pendingActions();
+      const agents = this.agents();
+      untracked(() => this.pushNihaoLedSync(pending, agents));
+    });
+  }
+
+  private pushNihaoLedSync(pending: AgentAction[], agents: Agent[]): void {
+    if (!this.sceneManager || this.useFallback()) return;
+    this.sceneManager.syncNihaoLeds({
+      agents: agents.map((a) => ({
+        id: a.id,
+        code: a.code,
+        status: pending.some((p) => p.agentId === a.id) ? 'WAITING_APPROVAL' : a.status,
+      })),
+      pendingAgentIds: new Set(pending.map((p) => p.agentId)),
+    });
   }
 
   ngOnInit(): void {
     void this.workspace.hydrate();
-    this.focusCode = agentCodeFromQuery(this.route.snapshot.queryParamMap.get('agent'));
-    this.focusLibraryId = libraryIdFromQuery(this.route.snapshot.queryParamMap.get('library'));
+    this.applyDeepLinkFromQuery(this.route.snapshot.queryParamMap);
     this.subs.add(
       this.route.queryParamMap.subscribe((q) => {
-        this.focusCode = agentCodeFromQuery(q.get('agent'));
-        this.focusLibraryId = libraryIdFromQuery(q.get('library'));
-        if (this.focusLibraryId) {
-          this.openLibrary(this.focusLibraryId);
-          return;
-        }
-        if (this.focusCode) {
-          this.sceneManager?.focusAgent(this.focusCode);
-          const ag = this.deskAgents().find((a) => a.code === this.focusCode);
-          if (ag) this.selectAgent(ag);
-        }
+        this.applyDeepLinkFromQuery(q);
       }),
     );
 
@@ -1063,7 +1103,7 @@ export class AiOfficePage implements OnInit, OnDestroy {
         this.dismissOnboarding();
         return;
       }
-      if (this.selectedAgent() || this.selectedLibrary() || this.ceoPanelOpen()) {
+      if (this.selectedAgent() || this.selectedRowDesk() || this.selectedLibrary() || this.ceoPanelOpen()) {
         e.preventDefault();
         this.closePanels();
         return;
@@ -1124,6 +1164,7 @@ export class AiOfficePage implements OnInit, OnDestroy {
 
   selectAgent(agent: Agent): void {
     this.selectedAgent.set(agent);
+    this.selectedRowDesk.set(null);
     this.selectedLibrary.set(null);
     this.ceoPanelOpen.set(false);
     this.workspaceSelection.selectAgent(agent.id, agent.code);
@@ -1131,11 +1172,86 @@ export class AiOfficePage implements OnInit, OnDestroy {
     localStorage.setItem('niha0_last_agent', agent.code);
   }
 
+  selectRowDesk(code: string): void {
+    const match = /^R(\d+)A(\d+)$/.exec(code);
+    if (!match) return;
+    const rowId = Number(match[1]);
+    const deskIndex = Number(match[2]) - 1;
+    const row = NIHAO_ROW_LAYOUTS.find((r) => r.rowId === rowId);
+    if (!row || deskIndex < 0 || deskIndex >= row.agents.length) return;
+    this.selectedRowDesk.set({
+      id: code,
+      rowId,
+      deskIndex,
+      role: row.role,
+      chiefTitle: row.chiefTitle,
+      color: row.color,
+      label: row.agents[deskIndex]!.title,
+    });
+    this.selectedAgent.set(null);
+    this.selectedLibrary.set(null);
+    this.ceoPanelOpen.set(false);
+    this.sceneManager?.setSelectedRowDesk(code);
+    this.sceneManager?.focusRowDesk(code);
+  }
+
+  selectChiefRow(rowId: number): void {
+    const row = NIHAO_ROW_LAYOUTS.find((r) => r.rowId === rowId);
+    if (!row) return;
+    this.selectedRowDesk.set({
+      id: `CHIEF-R${rowId}`,
+      rowId,
+      deskIndex: -1,
+      role: row.role,
+      chiefTitle: row.chiefTitle,
+      color: row.color,
+      label: row.chief.title,
+    });
+    this.selectedAgent.set(null);
+    this.selectedLibrary.set(null);
+    this.ceoPanelOpen.set(false);
+    this.sceneManager?.focusChief(rowId);
+  }
+
+  private applyDeepLinkFromQuery(q: import('@angular/router').ParamMap): void {
+    const desk = q.get('desk');
+    if (desk && /^R\d+A\d+$/.test(desk)) {
+      this.focusCode = null;
+      this.focusLibraryId = null;
+      this.selectRowDesk(desk);
+      return;
+    }
+
+    const rowParam = q.get('row');
+    if (rowParam && q.get('focus') === 'chief') {
+      const rowId = Number(rowParam);
+      if (rowId >= 1) {
+        this.focusCode = null;
+        this.focusLibraryId = null;
+        this.selectChiefRow(rowId);
+        return;
+      }
+    }
+
+    this.focusCode = agentCodeFromQuery(q.get('agent'));
+    this.focusLibraryId = libraryIdFromQuery(q.get('library'));
+    if (this.focusLibraryId) {
+      this.openLibrary(this.focusLibraryId);
+      return;
+    }
+    if (this.focusCode) {
+      this.sceneManager?.focusAgent(this.focusCode);
+      const ag = this.deskAgents().find((a) => a.code === this.focusCode);
+      if (ag) this.selectAgent(ag);
+    }
+  }
+
   openLibrary(id: string): void {
     const lib = getDataLibrary(id);
     if (!lib) return;
     this.selectedLibrary.set(lib);
     this.selectedAgent.set(null);
+    this.selectedRowDesk.set(null);
     this.ceoPanelOpen.set(false);
     this.workspaceSelection.selectLibrary(lib.id);
     this.sceneManager?.focusLibrary(lib.id);
@@ -1144,6 +1260,7 @@ export class AiOfficePage implements OnInit, OnDestroy {
   openCeoPanel(): void {
     this.ceoPanelOpen.set(true);
     this.selectedAgent.set(null);
+    this.selectedRowDesk.set(null);
     this.selectedLibrary.set(null);
     this.ceoSearch.set('');
     this.ceoVisibleCount.set(CEO_PAGE_SIZE);
@@ -1154,10 +1271,12 @@ export class AiOfficePage implements OnInit, OnDestroy {
 
   closePanels(): void {
     this.selectedAgent.set(null);
+    this.selectedRowDesk.set(null);
     this.selectedLibrary.set(null);
     this.ceoPanelOpen.set(false);
     this.workspaceSelection.clear();
     this.sceneManager?.setSelectedAgent(null);
+    this.sceneManager?.setSelectedRowDesk(null);
     this.sceneManager?.setSelectedLibrary(null);
     void this.router.navigate([], {
       relativeTo: this.route,
@@ -1317,7 +1436,13 @@ export class AiOfficePage implements OnInit, OnDestroy {
           return;
         }
         const agent = this.agents().find((a) => a.id === id);
-        if (agent) this.selectAgent(agent);
+        if (agent) {
+          this.selectAgent(agent);
+          return;
+        }
+        if (kind === 'row-desk' && id) {
+          this.selectRowDesk(id);
+        }
       });
       this.sceneManager.onFocusChange((kind, id) => {
         if (kind === 'library' && id) {
@@ -1335,9 +1460,20 @@ export class AiOfficePage implements OnInit, OnDestroy {
       if (this.focusLibraryId) {
         setTimeout(() => this.openLibrary(this.focusLibraryId!), 120);
       } else {
-        const focus = this.focusCode || localStorage.getItem('niha0_last_agent') || null;
-        if (focus) {
-          setTimeout(() => this.sceneManager?.focusAgent(focus), 120);
+        const q = this.route.snapshot.queryParamMap;
+        const desk = q.get('desk');
+        if (desk && /^R\d+A\d+$/.test(desk)) {
+          setTimeout(() => this.sceneManager?.focusRowDesk(desk), 120);
+        } else if (q.get('row') && q.get('focus') === 'chief') {
+          const rowId = Number(q.get('row'));
+          if (rowId >= 1) {
+            setTimeout(() => this.sceneManager?.focusChief(rowId), 120);
+          }
+        } else {
+          const focus = this.focusCode || localStorage.getItem('niha0_last_agent') || null;
+          if (focus) {
+            setTimeout(() => this.sceneManager?.focusAgent(focus), 120);
+          }
         }
       }
       this.useFallback.set(false);
@@ -1359,7 +1495,9 @@ export class AiOfficePage implements OnInit, OnDestroy {
   }
 
   private syncScene(): void {
-    this.sceneManager?.syncAgentStates(this.toDeskConfigs());
+    const configs = this.toDeskConfigs();
+    this.sceneManager?.syncAgentStates(configs);
+    this.pushNihaoLedSync(this.pendingActions(), this.agents());
   }
 
   private toDeskConfigs(): AgentDeskConfig[] {

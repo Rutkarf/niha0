@@ -1,202 +1,328 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api/api.service';
 import { DashboardKpis } from '../../core/api/api.models';
-import { KpiCardComponent } from '../../shared/ui/kpi-card/kpi-card.component';
-import { LoadingStateComponent } from '../../shared/ui/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
-import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
 import { TenancyService } from '../../core/tenancy/tenancy.service';
+import { AgentStatusService } from '../../core/navigation/agent-status.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
+import { DashboardHomeComponent } from './components/dashboard-home/dashboard-home.component';
+import { DashboardAgentsComponent } from './components/dashboard-agents/dashboard-agents.component';
+import { DashboardTeamsComponent } from './components/dashboard-teams/dashboard-teams.component';
+import { DashboardChiefsComponent } from './components/dashboard-chiefs/dashboard-chiefs.component';
+import { DashboardAnalyticsComponent } from './components/dashboard-analytics/dashboard-analytics.component';
+import { DashboardSettingsComponent } from './components/dashboard-settings/dashboard-settings.component';
+import { DashboardHelpComponent } from './components/dashboard-help/dashboard-help.component';
+import { DashboardDetailModalComponent } from './components/dashboard-detail-modal/dashboard-detail-modal.component';
+import { DashboardPreferencesService } from './services/dashboard-preferences.service';
+import type {
+  DashboardAgent,
+  DashboardSection,
+  DashboardTeam,
+} from './models/dashboard.models';
 
 type PeriodKey = 'today' | '7d' | '30d';
 
+const SECTION_LABELS: Record<DashboardSection, string> = {
+  home: 'Vue d’ensemble',
+  agents: 'Agents Nihao',
+  teams: 'Équipes',
+  chiefs: 'Chefs de pôle',
+  analytics: 'Analytics',
+  settings: 'Paramètres',
+  help: 'Aide',
+};
+
+const SECTION_DESCRIPTIONS: Record<DashboardSection, string> = {
+  home: 'Vue d’ensemble des KPIs',
+  agents: '40 membres · 10 chefs (onglet Chefs)',
+  teams: '10 équipes Nihao · stats et détails',
+  chiefs: '10 chefs sur la plateforme murale',
+  analytics: 'KPIs Nihao et graphiques',
+  settings: 'Préférences d’affichage et configuration',
+  help: 'Documentation et raccourcis',
+};
+
 @Component({
   selector: 'app-dashboard-page',
-  imports: [KpiCardComponent, LoadingStateComponent, EmptyStateComponent, RouterLink, AgentOfficeLinkComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    DashboardHomeComponent,
+    DashboardAgentsComponent,
+    DashboardTeamsComponent,
+    DashboardChiefsComponent,
+    DashboardAnalyticsComponent,
+    DashboardSettingsComponent,
+    DashboardHelpComponent,
+    DashboardDetailModalComponent,
+  ],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/ai-office" class="back-ao">← AI Office</a>
-          <h1>Dashboard</h1>
-          <p>Vue d’ensemble des KPIs {{ tenancy.organizationName() }}</p>
-          <app-agent-office-link moduleKey="strategie" label="Stratégie" />
+    <div class="page dashboard-page">
+      <header class="dash-sticky-head">
+        <div class="dash-row-main">
+          <a routerLink="/app/ai-office" class="dash-left back-ao">← AI Office</a>
+          <div class="dash-title-block">
+            <h1 class="dash-center">Dashboard</h1>
+            <p class="dash-row-sub">
+              @if (section() === 'home') {
+                {{ tenancy.companyLabel() }}
+              } @else {
+                {{ sectionDescription() }} · {{ tenancy.companyLabel() }}
+              }
+            </p>
+          </div>
+          <div class="dash-right">
+            <nav class="dash-crumb" aria-label="Fil d'Ariane">
+              <a routerLink="/app/dashboard" [queryParams]="{ section: null }" queryParamsHandling="merge" (click)="goHome()">Accueil</a>
+              <span class="crumb-sep" aria-hidden="true">/</span>
+              @if (section() === 'home') {
+                <span aria-current="page">Dashboard</span>
+              } @else {
+                <a routerLink="/app/dashboard" [queryParams]="{ section: null }" queryParamsHandling="merge" (click)="goHome()">Dashboard</a>
+                <span class="crumb-sep" aria-hidden="true">/</span>
+                <span aria-current="page">{{ sectionLabel() }}</span>
+              }
+            </nav>
+            @if (showPeriod()) {
+              <div class="period-group" role="group" aria-label="Période">
+                @for (p of periods; track p.key) {
+                  <button
+                    type="button"
+                    class="period-btn"
+                    [class.active]="period() === p.key"
+                    [attr.aria-pressed]="period() === p.key"
+                    (click)="period.set(p.key)"
+                  >
+                    {{ p.label }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
         </div>
-        @if (kpis() && kpis()!.pendingApprovalCount > 0) {
-          <a routerLink="/app/ai-office" class="approve-cta">
-            {{ kpis()!.pendingApprovalCount }} validation(s) CEO
-          </a>
-        }
       </header>
 
-      <div class="period-bar" role="group" aria-label="Période d’affichage">
-        <span class="period-note">Période :</span>
-        @for (p of periods; track p.key) {
-          <button
-            type="button"
-            class="period-chip"
-            [class.active]="period() === p.key"
-            [attr.aria-pressed]="period() === p.key"
-            (click)="period.set(p.key)"
-          >
-            {{ p.label }}
-          </button>
+      <div class="dash-view">
+        @if (section() !== 'home') {
+          <button type="button" class="back-chip" (click)="goHome()">← Vue d’ensemble</button>
         }
-        <span class="period-hint">{{ periodLabel() }} — affichage indicatif (données globales)</span>
+
+        @switch (section()) {
+          @case ('home') {
+            <app-dashboard-home
+              [loading]="loading()"
+              [kpis]="kpis()"
+              [period]="period()"
+              (navigate)="goSection($event)"
+            />
+          }
+          @case ('agents') {
+            <app-dashboard-agents (view)="openAgent($event)" />
+          }
+          @case ('teams') {
+            <app-dashboard-teams
+              [highPerformersOnly]="prefs().showHighPerformers"
+              [cardSize]="prefs().cardSize"
+              (view)="openTeam($event)"
+              (toggleHighPerformers)="togglePref('showHighPerformers')"
+            />
+          }
+          @case ('chiefs') {
+            <app-dashboard-chiefs (view)="openAgent($event)" />
+          }
+          @case ('analytics') {
+            <app-dashboard-analytics [kpis]="kpis()" [period]="period()" />
+          }
+          @case ('settings') {
+            <app-dashboard-settings />
+          }
+          @case ('help') {
+            <app-dashboard-help />
+          }
+        }
       </div>
 
-      <nav class="quick-nav" aria-label="Accès rapide">
-        @for (link of quickLinks; track link.route) {
-          <a [routerLink]="link.route" class="quick-link">
-            <span class="code">{{ link.code }}</span>
-            <span class="name">{{ link.label }}</span>
-          </a>
-        }
-      </nav>
-
-      @if (loading()) {
-        <app-loading-state message="Chargement des KPIs…" />
-      } @else if (!kpis()) {
-        <app-empty-state
-          title="KPIs indisponibles"
-          description="Impossible de charger les indicateurs. Vérifiez que le backend est démarré, puis réessayez."
-          icon="KPI"
-        />
-      } @else {
-        <div class="grid-kpis">
-          <app-kpi-card label="Clients" [value]="kpis()!.customerCount" />
-          <app-kpi-card label="Leads" [value]="kpis()!.leadCount" />
-          <app-kpi-card label="Opportunités" [value]="kpis()!.openOpportunityCount" />
-          <app-kpi-card label="Pipeline" [value]="kpis()!.pipelineAmount" [isCurrency]="true" />
-          <app-kpi-card label="Factures" [value]="kpis()!.invoiceCount" />
-          <app-kpi-card label="Tickets ouverts" [value]="kpis()!.openTicketCount" />
-          <app-kpi-card label="Agents IA" [value]="kpis()!.agentCount" />
-          <app-kpi-card label="Approbations" [value]="kpis()!.pendingApprovalCount" hint="En attente CEO" />
-        </div>
-      }
+      <app-dashboard-detail-modal
+        [open]="modalOpen()"
+        [agent]="modalAgent()"
+        [team]="modalTeam()"
+        (close)="closeModal()"
+        (action)="onModalAction($event)"
+      />
     </div>
   `,
   styles: [`
-    .approve-cta {
-      padding: 0.55rem 0.95rem;
-      border-radius: var(--radius-sm);
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.78rem;
-      letter-spacing: 0.02em;
-      background: color-mix(in srgb, var(--accent-warning) 16%, transparent);
-      border: 1px solid color-mix(in srgb, var(--accent-warning) 45%, transparent);
-      color: var(--accent-warning);
-      white-space: nowrap;
-      align-self: center;
+    .dashboard-page {
+      --dash-band-gap: var(--space-5);
+      --dash-inline-gap: calc(var(--dash-band-gap) / 2);
+      padding-top: var(--dash-band-gap);
+      max-width: var(--page-max-width);
     }
-    .approve-cta:hover { text-decoration: none; filter: brightness(1.05); }
-    .period-bar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem 0.55rem;
-      margin: 0 0 1rem;
-    }
-    .period-note {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-    .period-chip {
-      border: 1px solid var(--border-color);
-      background: var(--bg-elevated);
-      color: var(--text-secondary);
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.3rem 0.65rem;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: border-color var(--transition), color var(--transition), background var(--transition);
-    }
-    .period-chip:hover {
-      border-color: var(--border-strong);
-      color: var(--text-primary);
-    }
-    .period-chip.active {
-      border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
-      background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
-      color: var(--accent-primary);
-    }
-    .period-hint {
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      margin-left: 0.25rem;
-    }
-    .quick-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem 0.85rem;
-      margin: -0.25rem 0 1.25rem;
-      padding: 0.55rem 0;
+
+    .dash-sticky-head {
+      position: sticky;
+      top: 0;
+      z-index: calc(var(--z-sticky, 20) - 2);
+      margin: 0 calc(-1 * var(--space-5)) var(--dash-band-gap);
+      padding: var(--dash-inline-gap) var(--space-5);
+      background: color-mix(in srgb, var(--bg-secondary) 97%, transparent);
+      backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border-color);
     }
-    .quick-link {
+
+    .dash-row-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: var(--dash-inline-gap);
+    }
+
+    .dash-left { justify-self: start; white-space: nowrap; }
+
+    .dash-title-block { text-align: center; }
+
+    .dash-center {
+      margin: 0;
+      font-size: clamp(0.95rem, 0.85rem + 0.35vw, 1.1rem);
+      font-weight: var(--fw-extrabold);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+
+    .dash-row-sub {
+      margin: 0.25rem 0 0;
+      font-size: var(--fs-sm);
+      color: var(--text-secondary);
+    }
+
+    .dash-right {
+      justify-self: end;
       display: inline-flex;
-      align-items: baseline;
-      gap: 0.4rem;
-      padding: 0.25rem 0;
-      text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: border-color var(--transition), color var(--transition);
-    }
-    .quick-link:hover {
-      border-bottom-color: var(--accent-primary);
-      text-decoration: none;
-    }
-    .code {
-      font-family: var(--font-mono);
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: var(--dash-inline-gap);
+      font-size: var(--fs-sm);
       color: var(--text-muted);
     }
-    .name {
-      font-size: 0.82rem;
+
+    .dash-crumb {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: calc(var(--dash-inline-gap) / 2);
+    }
+
+    .dash-crumb a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: var(--fw-medium);
+    }
+
+    .dash-crumb a:hover { color: var(--accent-primary); text-decoration: none; }
+    .dash-crumb [aria-current='page'] { color: var(--text-primary); font-weight: var(--fw-semibold); }
+    .crumb-sep { opacity: 0.65; }
+
+    .period-group {
+      display: inline-flex;
+      gap: 0.2rem;
+    }
+
+    .period-btn {
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.62rem;
       font-weight: 600;
-      color: var(--text-primary);
+      padding: 0.2rem 0.45rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .period-btn.active {
+      border-color: color-mix(in srgb, var(--accent-primary) 45%, transparent);
+      background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+      color: var(--accent-primary);
+    }
+
+    .back-chip {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: var(--dash-inline-gap);
+      padding: 0.25rem 0.55rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .back-chip:hover {
+      color: var(--accent-primary);
+      border-color: color-mix(in srgb, var(--accent-primary) 35%, var(--border-color));
+    }
+
+    .dash-view { animation: page-in var(--duration-slow) var(--ease-standard) both; }
+@media (max-width: 720px) {
+      .dash-sticky-head {
+        margin-inline: calc(-1 * var(--space-3));
+        padding-inline: var(--space-3);
+      }
+
+      .dash-row-main {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: 'back title' 'crumbs crumbs';
+      }
+
+      .dash-left { grid-area: back; }
+      .dash-title-block { grid-area: title; justify-self: end; text-align: right; }
+      .dash-right { grid-area: crumbs; justify-self: stretch; justify-content: flex-end; }
     }
   `],
 })
 export class DashboardPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+  readonly prefService = inject(DashboardPreferencesService);
+
   readonly tenancy = inject(TenancyService);
+  readonly agents = inject(AgentStatusService);
+  readonly prefs = this.prefService.prefs;
+
   readonly loading = signal(true);
   readonly kpis = signal<DashboardKpis | null>(null);
   readonly period = signal<PeriodKey>('7d');
+  readonly section = signal<DashboardSection>('home');
 
-  readonly periods: { key: PeriodKey; label: string }[] = [
-    { key: 'today', label: "Aujourd'hui" },
-    { key: '7d', label: '7j' },
-    { key: '30d', label: '30j' },
+  readonly modalOpen = signal(false);
+  readonly modalAgent = signal<DashboardAgent | null>(null);
+  readonly modalTeam = signal<DashboardTeam | null>(null);
+
+  readonly periods = [
+    { key: 'today' as const, label: "Aujourd'hui" },
+    { key: '7d' as const, label: '7j' },
+    { key: '30d' as const, label: '30j' },
   ];
 
-  readonly periodLabel = computed(() => {
-    switch (this.period()) {
-      case 'today':
-        return "Aujourd'hui";
-      case '7d':
-        return '7 derniers jours';
-      case '30d':
-        return '30 derniers jours';
-    }
-  });
+  readonly sectionLabel = computed(() => SECTION_LABELS[this.section()]);
+  readonly sectionDescription = computed(() => SECTION_DESCRIPTIONS[this.section()]);
 
-  readonly quickLinks = [
-    { code: 'CRM', label: 'CRM', route: '/app/crm' },
-    { code: 'VE', label: 'Ventes', route: '/app/sales' },
-    { code: 'SU', label: 'Support', route: '/app/customer-relations' },
-    { code: 'CP', label: 'Compta', route: '/app/accounting' },
-    { code: 'BI', label: 'Analytics', route: '/app/bi' },
-    { code: 'AI', label: 'AI Center', route: '/app/ai-center' },
-  ];
+  readonly showPeriod = computed(() => ['home', 'analytics'].includes(this.section()));
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      const s = params.get('section') as DashboardSection | null;
+      if (s && s in SECTION_LABELS) this.section.set(s);
+      else this.section.set('home');
+    });
+
     this.api.getDashboardKpis().subscribe({
       next: (data) => {
         this.kpis.set(data);
@@ -204,5 +330,57 @@ export class DashboardPage implements OnInit {
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  goSection(section: DashboardSection): void {
+    this.section.set(section);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { section: section === 'home' ? null : section },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  goHome(): void {
+    this.goSection('home');
+  }
+
+  togglePref(key: 'showHighPerformers'): void {
+    this.prefService.update({ [key]: !this.prefs()[key] });
+  }
+
+  openAgent(agent: DashboardAgent): void {
+    this.modalAgent.set(agent);
+    this.modalTeam.set(null);
+    this.modalOpen.set(true);
+  }
+
+  openTeam(team: DashboardTeam): void {
+    this.modalTeam.set(team);
+    this.modalAgent.set(null);
+    this.modalOpen.set(true);
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.modalAgent.set(null);
+    this.modalTeam.set(null);
+  }
+
+  onModalAction(action: string): void {
+    if (action.startsWith('team-')) {
+      this.closeModal();
+      this.goSection('teams');
+      return;
+    }
+    this.toast.show(
+      action === 'contact'
+        ? 'Demande de contact envoyée (simulation).'
+        : action === 'assign'
+          ? 'Assignation de tâche ouverte (simulation).'
+          : 'Rapport généré (simulation).',
+      'info',
+    );
   }
 }

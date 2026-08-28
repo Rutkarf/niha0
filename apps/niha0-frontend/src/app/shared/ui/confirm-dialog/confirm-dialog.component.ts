@@ -1,15 +1,19 @@
 import { Component, HostListener, inject } from '@angular/core';
 import { ConfirmDialogService } from './confirm-dialog.service';
+import { FocusTrapDirective } from '../../a11y/focus-trap.directive';
 
 @Component({
   selector: 'app-confirm-dialog',
+  imports: [FocusTrapDirective],
   template: `
     @if (dialog.state(); as s) {
       <div class="overlay" role="presentation" (click)="dialog.cancel()">
         <div
+          #dialogPanel
           class="dialog"
           role="alertdialog"
           aria-modal="true"
+          [appFocusTrap]="true"
           [attr.aria-labelledby]="'confirm-title'"
           [attr.aria-describedby]="'confirm-desc'"
           (click)="$event.stopPropagation()"
@@ -69,6 +73,9 @@ import { ConfirmDialogService } from './confirm-dialog.service';
       justify-content: flex-end;
       gap: var(--space-2);
       flex-wrap: wrap;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .overlay { animation: none; }
     }
   `,
 })

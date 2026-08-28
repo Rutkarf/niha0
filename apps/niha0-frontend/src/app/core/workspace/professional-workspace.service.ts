@@ -11,6 +11,7 @@ import {
   emptyProfile,
 } from './professional.models';
 import { THEME_PRESETS } from './professional-presets';
+import { normalizeCompanyName } from '../tenancy/company-label';
 
 const DRAFT_KEY = 'niha0_onboarding_draft';
 
@@ -213,10 +214,51 @@ export class ProfessionalWorkspaceService {
     this.persistDraft();
   }
 
+  exportConfigJson(): string {
+    return JSON.stringify(
+      { profile: this.profileSignal(), config: this.configSignal() },
+      null,
+      2,
+    );
+  }
+
+  importConfigJson(raw: string): void {
+    const parsed = JSON.parse(raw) as {
+      profile?: Partial<CompanyProfile>;
+      config?: Partial<WorkspaceConfig>;
+    };
+    if (parsed.profile) {
+      this.patchProfile(parsed.profile);
+    }
+    if (parsed.config) {
+      const current = this.configSignal();
+      this.patchConfig({
+        ...parsed.config,
+        branding: parsed.config.branding
+          ? { ...current.branding, ...parsed.config.branding }
+          : undefined,
+        office: parsed.config.office
+          ? { ...current.office, ...parsed.config.office }
+          : undefined,
+        agents: parsed.config.agents ?? undefined,
+        assistants: parsed.config.assistants ?? undefined,
+      });
+    }
+  }
+
+  toggleOfficeWidget(widget: string): void {
+    const office = this.configSignal().office;
+    const widgets = office.widgets.includes(widget)
+      ? office.widgets.filter((w) => w !== widget)
+      : [...office.widgets, widget];
+    this.patchConfig({ office: { ...office, widgets } });
+  }
+
   private applyOrganization(org: Organization): void {
+    const normalizedName = normalizeCompanyName(org.name);
     this.profileSignal.set({
       id: org.id,
-      companyName: org.name ?? '',
+      companyName: normalizedName,
       sector: org.sector ?? '',
       companySize: org.companySize ?? '',
       country: org.country ?? '',
@@ -245,7 +287,7 @@ export class ProfessionalWorkspaceService {
       }
     }
     if (!config.branding.carpetText) {
-      config.branding.carpetText = org.name;
+      config.branding.carpetText = normalizedName;
     }
     if (!config.office.workspaceName) {
       config.office.workspaceName = org.name;

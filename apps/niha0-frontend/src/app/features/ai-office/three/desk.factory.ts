@@ -36,13 +36,26 @@ function standHex(palette: ScenePalette): string {
   return palette.wood;
 }
 
+export interface AgentDeskOptions {
+  castShadow?: boolean;
+  lowSegments?: boolean;
+  includePlant?: boolean;
+}
+
 /** Agent desk: table, chair, glowing monitor, nameplate, plant + code accessory. */
 export function createAgentDesk(
   label: string,
   accentHex: string,
   palette: ScenePalette,
   code?: string,
+  opts: AgentDeskOptions = {},
 ): THREE.Group {
+  const castShadow = opts.castShadow ?? true;
+  const legSeg = opts.lowSegments ? 6 : 8;
+  const chairSeg = opts.lowSegments ? 4 : 6;
+  const baseSeg = opts.lowSegments ? 8 : 12;
+  const includePlant = opts.includePlant ?? true;
+
   const group = new THREE.Group();
   group.name = `desk-${label}`;
   group.userData['type'] = 'desk';
@@ -56,7 +69,7 @@ export function createAgentDesk(
 
   const top = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.1, 0.85), wood);
   top.position.y = 0.78;
-  top.castShadow = true;
+  top.castShadow = castShadow;
   top.receiveShadow = true;
   group.add(top);
 
@@ -68,7 +81,7 @@ export function createAgentDesk(
   group.add(edge);
 
   const legMat = mat(palette.wood, { roughness: 0.7, metalness: 0.05 });
-  const legGeo = new THREE.CylinderGeometry(0.04, 0.05, 0.72, 8);
+  const legGeo = new THREE.CylinderGeometry(0.04, 0.05, 0.72, legSeg);
   for (const [x, z] of [
     [-0.7, -0.32],
     [0.7, -0.32],
@@ -77,7 +90,7 @@ export function createAgentDesk(
   ] as const) {
     const leg = new THREE.Mesh(legGeo, legMat);
     leg.position.set(x, 0.36, z);
-    leg.castShadow = true;
+    leg.castShadow = castShadow;
     group.add(leg);
   }
 
@@ -87,7 +100,7 @@ export function createAgentDesk(
   const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.55, 0.07), accent);
   back.position.set(0, 0.75, 0.95);
   group.add(back);
-  const chairLegGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.42, 6);
+  const chairLegGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.42, chairSeg);
   for (const [x, z] of [
     [-0.18, 0.6],
     [0.18, 0.6],
@@ -110,10 +123,10 @@ export function createAgentDesk(
   screen.position.set(0, 1.15, -0.19);
   group.add(screen);
 
-  const standMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.22, 8), standMat);
+  const standMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.22, legSeg), standMat);
   standMesh.position.set(0, 0.92, -0.22);
   group.add(standMesh);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.03, 12), standMat);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.03, baseSeg), standMat);
   base.position.set(0, 0.84, -0.22);
   group.add(base);
 
@@ -127,18 +140,20 @@ export function createAgentDesk(
   plateTop.position.set(0, 0.9, 0.3);
   group.add(plateTop);
 
-  const pot = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.07, 0.09, 0.1, 10),
-    mat('#B45309', { roughness: 0.8 }),
-  );
-  pot.position.set(0.65, 0.88, -0.2);
-  group.add(pot);
-  const foliage = new THREE.Mesh(
-    new THREE.SphereGeometry(0.12, 10, 8),
-    mat(palette.plant, { roughness: 0.75, emissive: palette.plant, emissiveIntensity: 0.08 }),
-  );
-  foliage.position.set(0.65, 1.02, -0.2);
-  group.add(foliage);
+  if (includePlant) {
+    const pot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.09, 0.1, 10),
+      mat('#B45309', { roughness: 0.8 }),
+    );
+    pot.position.set(0.65, 0.88, -0.2);
+    group.add(pot);
+    const foliage = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 10, 8),
+      mat(palette.plant, { roughness: 0.75, emissive: palette.plant, emissiveIntensity: 0.08 }),
+    );
+    foliage.position.set(0.65, 1.02, -0.2);
+    group.add(foliage);
+  }
 
   if (code) addDeskAccessory(group, code, accentHex, palette);
 

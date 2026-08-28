@@ -1,7 +1,9 @@
-import { Component, input, output } from '@angular/core';
+import { Component, HostListener, input, output } from '@angular/core';
+import { FocusTrapDirective } from '../../a11y/focus-trap.directive';
 
 @Component({
   selector: 'app-drawer',
+  imports: [FocusTrapDirective],
   template: `
     @if (open()) {
       <div class="panel-overlay" role="presentation" (click)="closed.emit()">
@@ -9,12 +11,13 @@ import { Component, input, output } from '@angular/core';
           class="panel-slide"
           role="dialog"
           aria-modal="true"
-          [attr.aria-label]="title()"
+          [appFocusTrap]="true"
+          [attr.aria-labelledby]="titleId"
           (click)="$event.stopPropagation()"
         >
           <header class="head">
-            <h2>{{ title() }}</h2>
-            <button type="button" class="close" (click)="closed.emit()" aria-label="Fermer">×</button>
+            <h2 [id]="titleId">{{ title() }}</h2>
+            <button type="button" class="close" (click)="closed.emit()" aria-label="Fermer le panneau">×</button>
           </header>
           <div class="body">
             <ng-content />
@@ -51,6 +54,10 @@ import { Component, input, output } from '@angular/core';
       cursor: pointer;
       line-height: 1;
     }
+    .close:focus-visible {
+      outline: var(--focus-ring-width) solid var(--focus-ring);
+      outline-offset: var(--focus-ring-offset);
+    }
     .body {
       flex: 1;
       overflow: auto;
@@ -74,4 +81,10 @@ export class DrawerComponent {
   readonly title = input.required<string>();
   readonly showFooter = input(false);
   readonly closed = output<void>();
+  readonly titleId = `drawer-title-${Math.random().toString(36).slice(2, 9)}`;
+
+  @HostListener('document:keydown.escape')
+  onEsc(): void {
+    if (this.open()) this.closed.emit();
+  }
 }

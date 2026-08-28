@@ -1,0 +1,28 @@
+---
+description: Alignement Nihao — colonnes droites, chefs face aux équipes, perf 3D.
+alwaysApply: true
+---
+
+# Nihao — Alignement & fonctionnalité
+
+## Architecture
+
+- **Tapis vert** : `config/open-space-carpet.ts` (22×16)
+- **50 bureaux** : colonnes droites, orientation via `three/desk-orientation.ts`
+- **10 chefs** : bureau écran vers colonne, avatar assis sur chaise (`DESK_CHAIR_SEAT`)
+- **Perf** : `three/render-performance.ts` (ombres off sur Nihao, segments réduits)
+
+## Règles d'orientation bureau
+
+- `orientDeskToward` : écran (local -Z) vers la cible
+- Avatar enfant du bureau : `rotation.y = PI`, position chaise (+Z local)
+- Chef regarde le centre de sa colonne ; membre regarde son chef
+
+## Fichiers clés
+
+| Rôle | Chemin |
+|------|--------|
+| Orientation | `three/desk-orientation.ts` |
+| Positions | `config/row-layout.ts` |
+| Meshes | `three/agent-row.factory.ts` |
+| Perf render | `three/render-performance.ts` |

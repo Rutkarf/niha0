@@ -1,232 +1,297 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api/api.service';
 import { Agent, Lead, Opportunity } from '../../core/api/api.models';
 import { LoadingStateComponent } from '../../shared/ui/loading-state/loading-state.component';
 import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
-import { AgentOfficeLinkComponent } from '../../shared/ui/agent-office-link/agent-office-link.component';
-import { AgentHubCardComponent } from '../../shared/ui/agent-hub-card/agent-hub-card.component';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
+import { FeatureAgentHostComponent } from '../../shared/ui/feature-agent-host/feature-agent-host.component';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge/status-badge.component';
 import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
 import { ToastService } from '../../shared/ui/toast/toast.service';
 import { ConfirmDialogService } from '../../shared/ui/confirm-dialog/confirm-dialog.service';
 import { OPP_STAGE_OPTIONS } from '../../shared/ui/status-labels';
+import { TenancyService } from '../../core/tenancy/tenancy.service';
 import { mapHttpError } from '../../core/api/http-error.util';
+
+const VISIBLE_ROWS = 5;
+const ROW_HEIGHT_REM = 2.85;
 
 @Component({
   selector: 'app-sales-page',
   imports: [
     FormsModule,
-    RouterLink,
-    LoadingStateComponent,
     EmptyStateComponent,
-    AgentOfficeLinkComponent,
-    AgentHubCardComponent,
+    FeaturePageHeaderComponent,
+    FeatureAgentHostComponent,
     StatusBadgeComponent,
     SkeletonComponent,
   ],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/ai-office" class="back-ao">← AI Office</a>
-          <h1>Ventes</h1>
-          <p>Pipeline commercial — opportunités et prospects (CRUD)</p>
-          <app-agent-office-link moduleKey="sales" label="Ventes" />
-        </div>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        group="Espace client"
+        title="Ventes"
+        backLabel="← AI Office Ventes"
+        [backQueryParams]="{ agent: 'sales' }"
+      />
 
-      @if (loadingAgent()) {
-        <app-loading-state message="Chargement agent…" />
-      } @else if (agent()) {
-        <app-agent-hub-card [agent]="agent()!" officeQuery="sales" />
-      }
+      <app-feature-agent-host
+        [agent]="agent()"
+        [loading]="loadingAgent()"
+        officeQuery="sales"
+        sectionLabel="Agent dédié Ventes"
+        officeLinkLabel="Ventes"
+      />
 
-      <section class="block">
-        <form class="create-form card" (ngSubmit)="createOpp()">
-          <h2>Nouvelle opportunité</h2>
-          <div class="row">
-            <label class="label">Titre
-              <input class="input" [(ngModel)]="oppTitle" name="oppTitle" required />
-            </label>
-            <label class="label">Montant
-              <input class="input" type="number" [(ngModel)]="oppAmount" name="oppAmount" min="0" />
-            </label>
-            <label class="label">Étape
-              <select class="input" [(ngModel)]="oppStage" name="oppStage">
-                @for (opt of stageOptions; track opt.value) {
-                  <option [value]="opt.value">{{ opt.label }}</option>
-                }
-              </select>
-            </label>
-            <label class="label">Prob. %
-              <input class="input" type="number" [(ngModel)]="oppProb" name="oppProb" min="0" max="100" />
-            </label>
-            <button type="submit" class="btn btn-primary" [disabled]="savingOpp() || !oppTitle.trim()">
-              {{ savingOpp() ? '…' : 'Ajouter' }}
-            </button>
-          </div>
-        </form>
-
-        <h2 class="section-title">Opportunités</h2>
-        @if (loadingOpp()) {
-          <app-skeleton message="Chargement du pipeline…" [lines]="5" />
-        } @else if (!opps().length) {
-          <app-empty-state
-            title="Aucune opportunité"
-            icon="OPP"
-            description="Créez une opportunité avec le formulaire ci-dessus pour alimenter le pipeline."
-          />
-        } @else {
-          <div class="table-toolbar">
-            <label class="search">
-              <span class="sr-only">Filtrer</span>
+      <div class="sales-pair-row">
+        <section class="feature-hub card sales-half">
+          <header class="data-list-toolbar" role="toolbar" aria-label="Opportunités">
+            <h2 class="section-title">Opportunités</h2>
+            <label class="section-search">
+              <span class="feature-search-icon" aria-hidden="true">⌕</span>
+              <span class="sr-only">Rechercher</span>
               <input
-                class="input"
+                class="input feature-search-input section-search-input"
                 type="search"
-                placeholder="Rechercher une opportunité…"
+                placeholder="Rechercher par titre, montant, étape…"
                 [ngModel]="oppQuery()"
                 (ngModelChange)="oppQuery.set($event)"
               />
             </label>
-            <p class="meta">{{ filteredOpps().length }} résultat(s)</p>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Opportunité</th><th>Étape</th><th>Montant</th><th>Prob.</th><th></th></tr>
-              </thead>
-              <tbody>
+            <div class="section-toolbar-end">
+              <span class="section-tag">{{ tenancy.companyLabel() }} — pipeline commercial</span>
+              <span class="section-count">{{ opps().length }} opp.</span>
+            </div>
+          </header>
+
+          <form class="feature-form sales-embedded-form" (ngSubmit)="createOpp()">
+            <p class="embedded-form-label">Nouvelle opportunité</p>
+            <div class="embedded-form-grid">
+              <label class="label">
+                Titre
+                <input class="input" [(ngModel)]="oppTitle" name="oppTitle" required />
+              </label>
+              <label class="label">
+                Montant
+                <input class="input" type="number" [(ngModel)]="oppAmount" name="oppAmount" min="0" />
+              </label>
+              <label class="label">
+                Étape
+                <select class="input" [(ngModel)]="oppStage" name="oppStage">
+                  @for (opt of stageOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </label>
+              <label class="label">
+                Prob. %
+                <input class="input" type="number" [(ngModel)]="oppProb" name="oppProb" min="0" max="100" />
+              </label>
+              <button type="submit" class="btn btn-primary btn-block" [disabled]="savingOpp() || !oppTitle.trim()">
+                {{ savingOpp() ? '…' : 'Ajouter' }}
+              </button>
+            </div>
+          </form>
+
+          @if (loadingOpp()) {
+            <app-skeleton message="Chargement du pipeline…" [lines]="5" />
+          } @else if (!opps().length) {
+            <app-empty-state title="Aucune opportunité" icon="OPP" description="Créez une opportunité avec le formulaire ci-dessus." />
+          } @else {
+            @if (filteredOpps().length > visibleRows) {
+              <p class="feature-scroll-hint table-hint">5 visibles · défilez</p>
+            }
+            <div class="feature-scroll-table" role="table">
+              <div class="feature-scroll-cols head opp-cols" role="row">
+                <span role="columnheader">Opportunité</span>
+                <span role="columnheader">Montant</span>
+                <span role="columnheader">Prob.</span>
+                <span role="columnheader" class="feature-col-actions">·</span>
+              </div>
+              <div class="feature-scroll-body" role="rowgroup" [style.max-height.rem]="visibleRows * rowHeightRem">
                 @for (o of filteredOpps(); track o.id) {
-                  <tr>
-                    <td>{{ o.title }}</td>
-                    <td>
-                      <select class="input stage" [ngModel]="o.stage" (ngModelChange)="changeStage(o, $event)">
+                  <div class="feature-scroll-cols row opp-cols" role="row">
+                    <span class="feature-cell feature-cell-primary" role="cell" [title]="o.title">{{ o.title }}</span>
+                    <span class="feature-cell feature-cell-muted" role="cell">{{ formatAmount(o.amount) }}</span>
+                    <span class="feature-cell feature-cell-muted" role="cell">{{ o.probability }}%</span>
+                    <span class="feature-row-actions feature-col-actions" role="cell">
+                      <select class="input stage" [ngModel]="o.stage" (ngModelChange)="changeStage(o, $event)" [title]="'Étape'">
                         @for (opt of stageOptions; track opt.value) {
                           <option [value]="opt.value">{{ opt.label }}</option>
                         }
                       </select>
-                    </td>
-                    <td>{{ formatAmount(o.amount) }}</td>
-                    <td>{{ o.probability }}%</td>
-                    <td>
-                      <button type="button" class="btn btn-danger btn-sm" (click)="removeOpp(o)">Suppr.</button>
-                    </td>
-                  </tr>
+                      <button type="button" class="btn btn-danger btn-sm" (click)="removeOpp(o)">×</button>
+                    </span>
+                  </div>
                 } @empty {
-                  <tr>
-                    <td colspan="5" class="empty-cell">Aucun résultat pour cette recherche</td>
-                  </tr>
+                  <p class="feature-empty-filter">Aucun résultat</p>
                 }
-              </tbody>
-            </table>
-          </div>
-        }
-      </section>
+              </div>
+            </div>
+          }
+        </section>
 
-      <section class="block">
-        <form class="create-form card" (ngSubmit)="createLead()">
-          <h2>Nouveau prospect</h2>
-          <div class="row">
-            <label class="label">Société
-              <input class="input" [(ngModel)]="leadCompany" name="leadCompany" required />
-            </label>
-            <label class="label">Contact
-              <input class="input" [(ngModel)]="leadContact" name="leadContact" />
-            </label>
-            <label class="label">Source
-              <input class="input" [(ngModel)]="leadSource" name="leadSource" />
-            </label>
-            <label class="label">Score
-              <input class="input" type="number" [(ngModel)]="leadScore" name="leadScore" min="0" max="100" />
-            </label>
-            <button type="submit" class="btn btn-primary" [disabled]="savingLead() || !leadCompany.trim()">
-              {{ savingLead() ? '…' : 'Ajouter' }}
-            </button>
-          </div>
-        </form>
-
-        <h2 class="section-title">Prospects</h2>
-        @if (loadingLeads()) {
-          <app-skeleton message="Chargement des leads…" [lines]="5" />
-        } @else if (!leads().length) {
-          <app-empty-state
-            title="Aucun prospect"
-            icon="LED"
-            description="Ajoutez un prospect via le formulaire pour enrichir votre pipeline commercial."
-          />
-        } @else {
-          <div class="table-toolbar">
-            <label class="search">
-              <span class="sr-only">Filtrer</span>
+        <section class="feature-hub card sales-half">
+          <header class="data-list-toolbar" role="toolbar" aria-label="Prospects">
+            <h2 class="section-title">Prospects</h2>
+            <label class="section-search">
+              <span class="feature-search-icon" aria-hidden="true">⌕</span>
+              <span class="sr-only">Rechercher</span>
               <input
-                class="input"
+                class="input feature-search-input section-search-input"
                 type="search"
-                placeholder="Rechercher un prospect…"
+                placeholder="Rechercher par société, contact, source…"
                 [ngModel]="leadQuery()"
                 (ngModelChange)="leadQuery.set($event)"
               />
             </label>
-            <p class="meta">{{ filteredLeads().length }} résultat(s)</p>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Société</th><th>Contact</th><th>Statut</th><th>Score</th><th>Source</th><th></th></tr>
-              </thead>
-              <tbody>
+            <div class="section-toolbar-end">
+              <span class="section-tag">{{ tenancy.companyLabel() }} — qualification des leads</span>
+              <span class="section-count">{{ leads().length }} leads</span>
+            </div>
+          </header>
+
+          <form class="feature-form sales-embedded-form" (ngSubmit)="createLead()">
+            <p class="embedded-form-label">Nouveau prospect</p>
+            <div class="embedded-form-grid">
+              <label class="label">
+                Société
+                <input class="input" [(ngModel)]="leadCompany" name="leadCompany" required />
+              </label>
+              <label class="label">
+                Contact
+                <input class="input" [(ngModel)]="leadContact" name="leadContact" />
+              </label>
+              <label class="label">
+                Source
+                <input class="input" [(ngModel)]="leadSource" name="leadSource" />
+              </label>
+              <label class="label">
+                Score
+                <input class="input" type="number" [(ngModel)]="leadScore" name="leadScore" min="0" max="100" />
+              </label>
+              <button type="submit" class="btn btn-primary btn-block" [disabled]="savingLead() || !leadCompany.trim()">
+                {{ savingLead() ? '…' : 'Ajouter' }}
+              </button>
+            </div>
+          </form>
+
+          @if (loadingLeads()) {
+            <app-skeleton message="Chargement des leads…" [lines]="5" />
+          } @else if (!leads().length) {
+            <app-empty-state title="Aucun prospect" icon="LED" description="Ajoutez un prospect avec le formulaire ci-dessus." />
+          } @else {
+            @if (filteredLeads().length > visibleRows) {
+              <p class="feature-scroll-hint table-hint">5 visibles · défilez</p>
+            }
+            <div class="feature-scroll-table" role="table">
+              <div class="feature-scroll-cols head lead-cols" role="row">
+                <span role="columnheader">Société</span>
+                <span role="columnheader">Statut</span>
+                <span role="columnheader">Score</span>
+                <span role="columnheader" class="feature-col-actions">·</span>
+              </div>
+              <div class="feature-scroll-body" role="rowgroup" [style.max-height.rem]="visibleRows * rowHeightRem">
                 @for (l of filteredLeads(); track l.id) {
-                  <tr>
-                    <td>{{ l.companyName }}</td>
-                    <td>{{ l.contactName }}</td>
-                    <td><app-status-badge [status]="l.status" /></td>
-                    <td>{{ l.score }}</td>
-                    <td>{{ l.source }}</td>
-                    <td>
-                      <button type="button" class="btn btn-danger btn-sm" (click)="removeLead(l)">Suppr.</button>
-                    </td>
-                  </tr>
+                  <div class="feature-scroll-cols row lead-cols" role="row">
+                    <span class="feature-cell feature-cell-primary" role="cell" [title]="l.companyName">{{ l.companyName }}</span>
+                    <span role="cell"><app-status-badge [status]="l.status" /></span>
+                    <span class="feature-cell feature-cell-muted" role="cell">{{ l.score }}</span>
+                    <span class="feature-row-actions feature-col-actions" role="cell">
+                      <button type="button" class="btn btn-danger btn-sm" (click)="removeLead(l)">×</button>
+                    </span>
+                  </div>
                 } @empty {
-                  <tr>
-                    <td colspan="6" class="empty-cell">Aucun résultat pour cette recherche</td>
-                  </tr>
+                  <p class="feature-empty-filter">Aucun résultat</p>
                 }
-              </tbody>
-            </table>
-          </div>
-        }
-      </section>
+              </div>
+            </div>
+          }
+        </section>
+      </div>
     </div>
   `,
   styles: [`
-    .block { margin-bottom: 1.75rem; }
-    .create-form { margin-bottom: 1rem; }
-    .create-form h2 { margin: 0 0 0.75rem; font-size: 0.95rem; font-family: var(--font-display); }
-    .row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
-    .label { margin-bottom: 0; min-width: 140px; flex: 1; }
-    .table-toolbar {
-      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-      gap: 0.75rem; margin-bottom: 0.75rem;
+    .sales-pair-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--dash-inline-gap, var(--space-3));
+      align-items: start;
     }
-    .search { flex: 1; min-width: 180px; max-width: 320px; }
-    .meta { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
-    .table-wrap {
-      overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);
-      background: var(--bg-elevated);
+
+    .sales-half {
+      min-width: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: var(--dash-inline-gap, var(--space-3));
     }
-    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    th, td { padding: 0.7rem 0.9rem; text-align: left; border-bottom: 1px solid var(--border-color); }
-    th { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
-    .stage { min-width: 140px; font-size: 0.8rem; }
-    .empty-cell { text-align: center; color: var(--text-muted); padding: 1.25rem; }
-    .sr-only {
-      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-      overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+
+    .sales-half .data-list-toolbar {
+      display: grid;
+      grid-template-columns: auto minmax(12rem, 1fr) minmax(0, auto);
+      align-items: center;
+      width: 100%;
     }
-  `],
+
+    .sales-half .section-search {
+      justify-self: center;
+      max-width: 28rem;
+      width: 100%;
+    }
+
+    .table-hint {
+      margin: 0;
+    }
+
+    .sales-half .feature-hub-head {
+      margin-bottom: var(--dash-inline-gap);
+      padding-bottom: var(--dash-inline-gap);
+    }
+
+    .sales-embedded-form {
+      margin-bottom: var(--dash-inline-gap);
+      padding-bottom: var(--dash-inline-gap);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .embedded-form-label {
+      margin: 0 0 var(--dash-inline-gap);
+      font-size: 0.72rem;
+      font-weight: var(--fw-bold);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .embedded-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--dash-inline-gap);
+      align-items: end;
+    }
+
+    .embedded-form-grid .btn-block {
+      grid-column: 1 / -1;
+    }
+
+    .label { margin-bottom: 0; min-width: 0; }
+    .opp-cols { grid-template-columns: minmax(0, 1.4fr) minmax(72px, auto) 44px minmax(100px, auto); }
+    .lead-cols { grid-template-columns: minmax(0, 1.4fr) 88px 44px 36px; }
+    .stage { min-width: 0; width: 100%; font-size: 0.68rem; padding: 0.2rem 0.25rem; }
+
+    @media (max-width: 960px) {
+      .sales-pair-row { grid-template-columns: 1fr; }
+      .embedded-form-grid { grid-template-columns: 1fr; }
+    }
+`],
 })
 export class SalesPage implements OnInit {
+  readonly visibleRows = VISIBLE_ROWS;
+  readonly rowHeightRem = ROW_HEIGHT_REM;
+
+  readonly tenancy = inject(TenancyService);
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
   private readonly confirmDialog = inject(ConfirmDialogService);
@@ -289,10 +354,7 @@ export class SalesPage implements OnInit {
   }
 
   formatAmount(amount: number): string {
-    return Number(amount ?? 0).toLocaleString('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-    });
+    return Number(amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
   }
 
   createOpp(): void {
@@ -333,7 +395,7 @@ export class SalesPage implements OnInit {
   async removeOpp(o: Opportunity): Promise<void> {
     const ok = await this.confirmDialog.confirm({
       title: 'Supprimer l’opportunité',
-      message: `Voulez-vous supprimer « ${o.title} » ? Cette action est irréversible.`,
+      message: `Voulez-vous supprimer « ${o.title} » ?`,
       confirmLabel: 'Supprimer',
       danger: true,
     });
@@ -377,7 +439,7 @@ export class SalesPage implements OnInit {
   async removeLead(l: Lead): Promise<void> {
     const ok = await this.confirmDialog.confirm({
       title: 'Supprimer le prospect',
-      message: `Voulez-vous supprimer « ${l.companyName} » ? Cette action est irréversible.`,
+      message: `Voulez-vous supprimer « ${l.companyName} » ?`,
       confirmLabel: 'Supprimer',
       danger: true,
     });

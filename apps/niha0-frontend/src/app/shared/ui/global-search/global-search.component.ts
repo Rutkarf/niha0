@@ -1,6 +1,18 @@
-import { Component, computed, HostListener, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { FocusTrapDirective } from '../../a11y/focus-trap.directive';
+import { focusFirstElement } from '../../a11y/focusable.util';
 
 interface QuickLink {
   label: string;
@@ -19,46 +31,60 @@ const LINKS: QuickLink[] = [
   { label: 'AI Center', route: '/app/ai-center', keywords: 'agents ia' },
   { label: 'AI Office', route: '/app/ai-office', keywords: 'bureau 3d' },
   { label: 'Notifications', route: '/app/notifications', keywords: 'alertes' },
-  { label: 'Paramètres', route: '/app/settings', keywords: 'profil thème billing' },
-  { label: 'Aide', route: '/app/help', keywords: 'faq documentation' },
+  { label: 'Paramètres', route: '/app/settings', keywords: 'profil thème billing mfa équipe sécurité' },
+  { label: 'Aide', route: '/app/help', keywords: 'faq documentation raccourcis support guides' },
   { label: 'Audit', route: '/app/audit', keywords: 'logs journal' },
+  { label: 'Centre Données', route: '/app/data-hub', keywords: 'bibliothèques cms pim scm' },
   { label: 'Workspace', route: '/app/workspace', keywords: 'branding' },
 ];
 
 @Component({
   selector: 'app-global-search',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, FocusTrapDirective],
   template: `
     <div class="wrap">
-      <button type="button" class="trigger" (click)="open.set(true)" aria-haspopup="dialog" [attr.aria-expanded]="open()">
+      <button
+        type="button"
+        class="trigger"
+        (click)="openPalette()"
+        aria-haspopup="dialog"
+        [attr.aria-expanded]="open()"
+        aria-controls="global-search-dialog"
+        aria-label="Ouvrir la recherche globale"
+      >
         <span aria-hidden="true">⌕</span>
         <span class="hint">Rechercher</span>
-        <kbd>Ctrl K</kbd>
+        <kbd aria-hidden="true">Ctrl K</kbd>
       </button>
       @if (open()) {
         <div class="overlay" role="presentation" (click)="close()">
           <div
+            id="global-search-dialog"
             class="panel"
             role="dialog"
             aria-modal="true"
-            aria-label="Recherche globale"
+            aria-labelledby="global-search-label"
+            [appFocusTrap]="true"
             (click)="$event.stopPropagation()"
           >
+            <label id="global-search-label" class="sr-only" for="global-search-input">Recherche globale</label>
             <input
+              #searchInput
+              id="global-search-input"
               class="input"
               type="search"
               placeholder="Aller à un module…"
+              autocomplete="off"
               [(ngModel)]="q"
               (ngModelChange)="query.set($event)"
-              #searchInput
             />
-            <ul>
+            <ul role="listbox" aria-label="Résultats de recherche">
               @for (l of filtered(); track l.route) {
-                <li>
-                  <a [routerLink]="l.route" (click)="close()">{{ l.label }}</a>
+                <li role="none">
+                  <a [routerLink]="l.route" role="option" (click)="close()">{{ l.label }}</a>
                 </li>
               } @empty {
-                <li class="empty">Aucun résultat</li>
+                <li class="empty" role="status">Aucun résultat</li>
               }
             </ul>
           </div>
@@ -128,6 +154,9 @@ export class GlobalSearchComponent {
   readonly query = signal('');
   q = '';
 
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  private returnFocus: HTMLElement | null = null;
+
   readonly filtered = computed(() => {
     const q = this.query().trim().toLowerCase();
     if (!q) return LINKS.slice(0, 8);
@@ -136,17 +165,38 @@ export class GlobalSearchComponent {
     );
   });
 
+  constructor() {
+    effect(() => {
+      if (!this.open()) return;
+      afterNextRender(() => {
+        const input = this.searchInput()?.nativeElement;
+        if (input) {
+          input.focus();
+        } else {
+          focusFirstElement(document.getElementById('global-search-dialog') as HTMLElement);
+        }
+      });
+    });
+  }
+
+  openPalette(): void {
+    this.returnFocus = document.activeElement as HTMLElement | null;
+    this.open.set(true);
+  }
+
   close(): void {
     this.open.set(false);
     this.query.set('');
     this.q = '';
+    this.returnFocus?.focus?.();
+    this.returnFocus = null;
   }
 
   @HostListener('window:keydown', ['$event'])
   onKey(ev: KeyboardEvent): void {
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k') {
       ev.preventDefault();
-      this.open.set(true);
+      if (!this.open()) this.openPalette();
     }
     if (ev.key === 'Escape' && this.open()) this.close();
   }

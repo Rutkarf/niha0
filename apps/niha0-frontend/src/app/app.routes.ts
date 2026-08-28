@@ -88,6 +88,12 @@ export const routes: Routes = [
           import('./features/workspace/workspace-settings.page').then((m) => m.WorkspaceSettingsPage),
       },
       {
+        path: 'data-hub',
+        canActivate: [onboardingGuard],
+        loadComponent: () =>
+          import('./features/data/data-hub.page').then((m) => m.DataHubPage),
+      },
+      {
         path: 'company-data',
         canActivate: [onboardingGuard],
         loadComponent: () =>

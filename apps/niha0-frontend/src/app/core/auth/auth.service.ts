@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { normalizeCompanyName } from '../tenancy/company-label';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { LoginRequest, TokenResponse, UserMe } from './auth.models';
 
@@ -100,7 +101,10 @@ export class AuthService {
       const me = await firstValueFrom(
         this.http.get<UserMe>(`${this.baseUrl}/auth/me`, { withCredentials: true }),
       );
-      this.userSignal.set(me);
+      this.userSignal.set({
+        ...me,
+        organizationName: normalizeCompanyName(me.organizationName) || me.organizationName,
+      });
       return me;
     } catch {
       this.clearSession();

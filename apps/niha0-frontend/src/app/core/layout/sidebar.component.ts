@@ -43,31 +43,58 @@ interface NavGroup {
         </a>
         @if (!collapsed()) {
           <span class="tagline">Network Intelligence Hub Access Open</span>
-          <span class="org">{{ tenancy.organizationName() }}</span>
+          <span class="org">{{ tenancy.companyLabel() }}</span>
         }
       </div>
 
-      <a
-        routerLink="/app/ai-office"
-        routerLinkActive="active"
-        class="ai-office-link"
-        title="AI Office (O)"
-        (click)="emitNavigate()"
-      >
-        <span class="desk-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-            <circle cx="12" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M6 19c0-3.2 2.7-5 6-5s6 1.8 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M4 21h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-        </span>
-        @if (!collapsed()) {
-          <span class="label">AI Office</span>
-          @if (agents.pendingCount() > 0) {
-            <span class="badge">{{ agents.pendingCount() }}</span>
+      <div class="hub-nav" role="group" aria-label="Hub agents IA">
+        <a
+          routerLink="/app/ai-office"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="ai-office-link hub-primary"
+          title="AI Office — Salle 3D (O)"
+          (click)="emitNavigate()"
+        >
+          <span class="desk-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
+              <circle cx="12" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M6 19c0-3.2 2.7-5 6-5s6 1.8 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M4 21h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </span>
+          @if (!collapsed()) {
+            <span class="label">AI Office</span>
+            <span class="hub-hint">3D</span>
+            @if (agents.pendingCount() > 0) {
+              <span class="badge">{{ agents.pendingCount() }}</span>
+            }
           }
-        }
-      </a>
+        </a>
+
+        <a
+          routerLink="/app/ai-center"
+          routerLinkActive="active"
+          class="ai-center-link hub-secondary"
+          title="AI Center — Pilotage agents"
+          (click)="emitNavigate()"
+        >
+          <span class="hub-icon" aria-hidden="true" [style.--agent-accent]="'#60A5FA'">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" class="hub-svg">
+              <circle class="hub-node" cx="12" cy="5.5" r="2.2" stroke-width="1.5" />
+              <circle class="hub-node" cx="6" cy="17" r="2.2" stroke-width="1.5" />
+              <circle class="hub-node" cx="18" cy="17" r="2.2" stroke-width="1.5" />
+              <path class="hub-line" d="M12 7.7v3.2M10.2 14.5 7.8 15M13.8 14.5l2.4.5M12 10.9 6.8 15.2M12 10.9l5.2 4.3" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+          </span>
+          @if (!collapsed()) {
+            <span class="label">AI Center</span>
+            @if (agents.pendingCount() > 0) {
+              <span class="badge badge-muted">{{ agents.pendingCount() }}</span>
+            }
+          }
+        </a>
+      </div>
 
       <nav class="nav" aria-label="Navigation principale">
         @for (group of navGroups(); track group.title) {
@@ -206,11 +233,26 @@ interface NavGroup {
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .hub-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      margin: 0.45rem 0.28rem 0.35rem;
+      padding: 0.22rem;
+      border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--bg-elevated) 75%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
+    }
+    .collapsed .hub-nav {
+      margin: 0.45rem 0.2rem 0.35rem;
+      padding: 0.18rem;
+      gap: 0.15rem;
+    }
     .ai-office-link {
       display: flex;
       align-items: center;
       gap: 0.35rem;
-      margin: 0.45rem 0.28rem 0.2rem;
+      margin: 0;
       padding: 0.42rem 0.38rem;
       height: 2.1rem;
       border-radius: var(--radius-sm);
@@ -225,12 +267,81 @@ interface NavGroup {
       overflow: hidden;
       transition: background var(--transition), box-shadow var(--transition);
     }
-    .collapsed .ai-office-link {
+    .ai-center-link {
+      display: flex;
+      align-items: center;
+      gap: 0.32rem;
+      margin: 0 0 0 0.28rem;
+      padding: 0.36rem 0.38rem 0.36rem 0.5rem;
+      height: 1.9rem;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      border: 1px solid transparent;
+      border-left: 2px solid color-mix(in srgb, #60A5FA 40%, var(--border-color));
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 650;
+      font-size: 0.68rem;
+      white-space: nowrap;
+      overflow: hidden;
+      transition: background var(--transition), color var(--transition), box-shadow var(--transition), border-color var(--transition);
+    }
+    .collapsed .ai-office-link,
+    .collapsed .ai-center-link {
       justify-content: center;
       padding: 0.42rem 0;
+      margin: 0;
+      border-left: none;
     }
     .ai-office-link:hover { text-decoration: none; background: color-mix(in srgb, var(--accent-primary) 18%, transparent); }
     .ai-office-link.active { box-shadow: inset 0 0 0 1px var(--accent-primary); }
+    .ai-center-link:hover {
+      text-decoration: none;
+      background: color-mix(in srgb, #60A5FA 10%, transparent);
+      color: var(--text-primary);
+      border-left-color: #60A5FA;
+    }
+    .ai-center-link.active {
+      background: color-mix(in srgb, #60A5FA 14%, transparent);
+      color: #60A5FA;
+      border-color: color-mix(in srgb, #60A5FA 35%, transparent);
+      border-left-color: #60A5FA;
+      box-shadow: inset 3px 0 0 #60A5FA;
+    }
+    .collapsed .ai-center-link.active {
+      box-shadow: inset 0 0 0 1px #60A5FA;
+    }
+    .hub-hint {
+      font-size: 0.52rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: color-mix(in srgb, var(--accent-primary) 75%, var(--text-muted));
+      flex-shrink: 0;
+    }
+    .hub-icon {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+    }
+    .hub-svg .hub-node {
+      stroke: var(--agent-accent, #60A5FA);
+      fill: none;
+    }
+    .hub-svg .hub-line {
+      stroke: var(--text-muted);
+      opacity: 0.55;
+    }
+    .ai-center-link:hover .hub-svg .hub-line,
+    .ai-center-link.active .hub-svg .hub-line {
+      stroke: var(--agent-accent, #60A5FA);
+      opacity: 0.85;
+    }
+    .ai-center-link.active .hub-svg .hub-node {
+      filter: drop-shadow(0 0 3px color-mix(in srgb, #60A5FA 55%, transparent));
+    }
     .badge {
       margin-left: auto;
       background: var(--accent-warning);
@@ -241,6 +352,11 @@ interface NavGroup {
       font-weight: 800;
       flex-shrink: 0;
       white-space: nowrap;
+    }
+    .badge-muted {
+      background: color-mix(in srgb, #60A5FA 22%, var(--bg-elevated));
+      color: #60A5FA;
+      border: 1px solid color-mix(in srgb, #60A5FA 35%, transparent);
     }
     .nav {
       flex: 1;
@@ -438,38 +554,34 @@ export class SidebarComponent implements OnInit {
         { label: 'RH', route: '/app/hcm', icon: 'RH' },
         { label: 'Juridique', route: '/app/legal', icon: 'JU' },
         { label: 'Stock', route: '/app/wms', icon: 'ST' },
-        { label: 'PIM', route: '/app/pim', icon: 'PI' },
-        { label: 'CMS', route: '/app/cms', icon: 'CM' },
-        { label: 'SCM', route: '/app/scm', icon: 'SC' },
-        { label: 'MRP', route: '/app/mrp', icon: 'MR' },
-        { label: 'ETL', route: '/app/etl', icon: 'ET' },
-        { label: 'EDI', route: '/app/edi', icon: 'ED' },
       ],
     },
     {
       title: 'Pilotage',
       items: [
         { label: 'Analytics / BI', route: '/app/bi', icon: 'BI' },
+        { label: 'Stratégie', route: '/app/bpm', icon: 'SG' },
         { label: 'Chat', route: '/app/chat', icon: 'CH' },
         { label: 'Runtime', route: '/app/runtime', icon: 'RT' },
         { label: 'Studio', route: '/app/studio', icon: 'SU' },
         { label: 'Marketplace', route: '/app/marketplace', icon: 'MP' },
         { label: 'Gouvernance', route: '/app/governance', icon: 'GV' },
-        { label: 'Stratégie', route: '/app/bpm', icon: 'SG', soon: true },
-        { label: 'AI Center', route: '/app/ai-center', icon: 'AI' },
         { label: 'Audit', route: '/app/audit', icon: 'AU' },
       ],
     },
     {
       title: 'Données',
-      items: DATA_LIBRARIES.map((lib) => ({
-        label: lib.label,
-        route: lib.route,
-        icon: lib.icon,
-        soon: lib.status === 'soon',
-        libraryId: lib.id,
-        queryParams: lib.status === 'soon' ? { library: lib.id } : undefined,
-      })),
+      items: [
+        { label: 'Centre Données', route: '/app/data-hub', icon: 'DT' },
+        ...DATA_LIBRARIES.map((lib) => ({
+          label: lib.label,
+          route: lib.route,
+          icon: lib.icon,
+          soon: lib.status === 'soon',
+          libraryId: lib.id,
+          queryParams: lib.status === 'soon' ? { library: lib.id } : undefined,
+        })),
+      ],
     },
     {
       title: 'Système',

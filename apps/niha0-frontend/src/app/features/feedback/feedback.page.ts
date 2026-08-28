@@ -1,25 +1,27 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { FeedbackCategory } from '../../core/api/api.models';
 import { mapHttpError } from '../../core/api/http-error.util';
+import { FeaturePageHeaderComponent } from '../../shared/ui/feature-page-header/feature-page-header.component';
 
 @Component({
   selector: 'app-feedback-page',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, FeaturePageHeaderComponent],
   template: `
-    <div class="page">
-      <header class="page-header">
-        <div>
-          <a routerLink="/app/settings" class="back-ao">← Paramètres</a>
-          <h1>Feedback</h1>
-          <p>Signalez un bug, proposez une fonctionnalité ou un commentaire billing.</p>
-        </div>
-      </header>
+    <div class="page feature-module-page">
+      <app-feature-page-header
+        group="Système"
+        title="Feedback"
+        backLabel="← AI Office"
+      />
 
-      <form class="card feedback-form" (ngSubmit)="submit()">
+      <p class="feature-callout" role="note">
+        Signalez un bug, proposez une fonctionnalité ou un commentaire billing.
+      </p>
+
+      <form class="feature-hub card feedback-form" (ngSubmit)="submit()">
         <label class="label">
           Catégorie
           <select class="input" [(ngModel)]="category" name="category">
@@ -46,7 +48,7 @@ import { mapHttpError } from '../../core/api/http-error.util';
     </div>
   `,
   styles: [`
-    .feedback-form { max-width: 520px; padding: 1.15rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .feedback-form { max-width: 520px; display: flex; flex-direction: column; gap: 0.75rem; }
     .label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8rem; }
     .error { color: var(--accent-danger); margin: 0; }
     .ok { color: var(--accent-success); margin: 0; }

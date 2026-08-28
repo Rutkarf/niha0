@@ -4,6 +4,8 @@
  */
 import type { NavigationObstacle } from './navigation.types';
 
+export { OPEN_SPACE_CARPET, openSpaceCarpetBounds, isInsideOpenSpaceCarpet } from '../config/open-space-carpet';
+
 export const ROOM = {
   minX: -16,
   maxX: 18,
@@ -23,33 +25,36 @@ export const CEO_POS = { x: -10, y: 0, z: 0 } as const;
 /** Circulation / luminous strip between CEO (left) and open-space (right). */
 export const AISLE_X = -4.5;
 
-/** 11 existing desks — 2 rows (7 + 4) on the right, shifted into the enlarged floor. */
+/**
+ * 11 bureaux legacy — positions de référence (non rendues en 3D depuis Nihao).
+ * Disposition 7+4 hors tapis vert ; seuls les 50 bureaux Nihao sont visibles.
+ */
 export const DESK_BY_CODE: Record<string, [number, number]> = {
-  CRM: [1.2, 3.6],
-  VENTES: [3.3, 3.6],
-  SUPPORT: [5.4, 3.6],
-  MARKETING: [7.5, 3.6],
-  ERP: [9.6, 3.6],
-  COMPTABILITE: [11.7, 3.6],
-  RH: [13.8, 3.6],
-  JURIDIQUE: [3.0, 0.4],
-  STOCK: [6.4, 0.4],
-  ANALYTICS: [9.8, 0.4],
-  STRATEGIE: [13.2, 0.4],
+  CRM: [0.5, 9.4],
+  VENTES: [3.0, 9.4],
+  SUPPORT: [5.5, 9.4],
+  MARKETING: [8.0, 9.4],
+  ERP: [10.5, 9.4],
+  COMPTABILITE: [13.0, 9.4],
+  RH: [15.5, 9.4],
+  JURIDIQUE: [2.0, 10.9],
+  STOCK: [6.5, 10.9],
+  ANALYTICS: [11.0, 10.9],
+  STRATEGIE: [15.0, 10.9],
 };
 
 export const DESK_POSITIONS: Array<[number, number, number]> = [
-  [1.2, 0, 3.6],
-  [3.3, 0, 3.6],
-  [5.4, 0, 3.6],
-  [7.5, 0, 3.6],
-  [9.6, 0, 3.6],
-  [11.7, 0, 3.6],
-  [13.8, 0, 3.6],
-  [3.0, 0, 0.4],
-  [6.4, 0, 0.4],
-  [9.8, 0, 0.4],
-  [13.2, 0, 0.4],
+  [0.5, 0, 9.4],
+  [3.0, 0, 9.4],
+  [5.5, 0, 9.4],
+  [8.0, 0, 9.4],
+  [10.5, 0, 9.4],
+  [13.0, 0, 9.4],
+  [15.5, 0, 9.4],
+  [2.0, 0, 10.9],
+  [6.5, 0, 10.9],
+  [11.0, 0, 10.9],
+  [15.0, 0, 10.9],
 ];
 
 export const MEZZANINE = {
@@ -106,13 +111,13 @@ export const MEZZANINE_ASSISTANTS: readonly ScenicAssistantDef[] = [
   },
 ];
 
-/** Three new CEO staff assistants — left front. CEO office stays put. */
+/** Three CEO staff assistants — left front, postes direction. */
 export const CEO_STAFF: readonly ScenicAssistantDef[] = [
   {
     id: 'ceo-protocol',
     code: 'PROTOCOL',
-    name: 'Protocole',
-    role: 'Assistant CEO',
+    name: 'Chief of Staff',
+    role: 'Direction — Chief of Staff',
     accent: '#D4A017',
     x: -12.4,
     y: 0,
@@ -121,8 +126,8 @@ export const CEO_STAFF: readonly ScenicAssistantDef[] = [
   {
     id: 'ceo-staff',
     code: 'STAFF',
-    name: 'Cabinet',
-    role: 'Assistant CEO',
+    name: 'Assistant de direction',
+    role: 'Direction — Assistant de direction',
     accent: '#178F5E',
     x: -10.0,
     y: 0,
@@ -131,8 +136,8 @@ export const CEO_STAFF: readonly ScenicAssistantDef[] = [
   {
     id: 'ceo-advisor',
     code: 'ADVISOR',
-    name: 'Conseil',
-    role: 'Assistant CEO',
+    name: 'Conseiller stratégique',
+    role: 'Direction — Conseiller stratégique',
     accent: '#67E8F9',
     x: -7.6,
     y: 0,
@@ -156,6 +161,9 @@ export const STAIRS_OBSTACLE: NavigationObstacle = {
 };
 
 export type TotemKind = 'eagle' | 'wolf' | 'fox' | 'tiger' | 'owl' | 'dragon' | 'butterfly';
+
+/** Re-export config rangées Nihao (50 agents + 10 chefs) — voir config/row-layout.ts */
+export { NIHAO_ROW_LAYOUTS, buildNihaoOfficeLayout, CHIEF_PLATFORM, NIHAO_ROW_GRID } from '../config/row-layout';
 
 export interface TotemDef {
   kind: TotemKind;

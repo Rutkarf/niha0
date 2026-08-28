@@ -3,7 +3,7 @@
 -- Rename / expand agents
 UPDATE agents SET code = 'VENTES', name = 'Ventes', domain = 'Ventes',
     description = 'Prospects, opportunités, devis et pipeline',
-    mission = 'Convertir les prospects OptimusTest en clients'
+    mission = 'Convertir les prospects Optimus Test en clients'
 WHERE id = 'c0000000-0000-0000-0000-000000000002';
 
 UPDATE agents SET code = 'SUPPORT', name = 'Support', domain = 'Support',
@@ -13,7 +13,7 @@ WHERE id = 'c0000000-0000-0000-0000-000000000005';
 
 UPDATE agents SET code = 'ERP', name = 'ERP', domain = 'ERP',
     description = 'Opérations, ressources, achats et processus',
-    mission = 'Orchestrer les opérations d''OptimusTest'
+    mission = 'Orchestrer les opérations d''Optimus Test'
 WHERE id = 'c0000000-0000-0000-0000-000000000003';
 
 UPDATE agents SET name = 'Comptabilité', domain = 'Comptabilité',
@@ -28,12 +28,12 @@ WHERE id = 'c0000000-0000-0000-0000-000000000006';
 
 UPDATE agents SET name = 'Marketing', domain = 'Marketing',
     description = 'Campagnes, CMS, réseaux et performance',
-    mission = 'Accroître la visibilité d''OptimusTest'
+    mission = 'Accroître la visibilité d''Optimus Test'
 WHERE id = 'c0000000-0000-0000-0000-000000000001';
 
 UPDATE agents SET name = 'Direction — Rutkarf Bzz', domain = 'Direction',
     description = 'NIHAO Command Center — validations & KPI',
-    mission = 'Piloter OptimusTest et valider les actions IA'
+    mission = 'Piloter Optimus Test et valider les actions IA'
 WHERE id = 'c0000000-0000-0000-0000-000000000007';
 
 INSERT INTO agents (id, organization_id, code, name, domain, description, mission, status, created_at)

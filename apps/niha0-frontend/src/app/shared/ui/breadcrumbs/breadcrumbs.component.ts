@@ -26,6 +26,7 @@ const LABEL_MAP: Record<string, string> = {
   audit: 'Audit',
   settings: 'Paramètres',
   notifications: 'Notifications',
+  'data-hub': 'Centre Données',
   workspace: 'Workspace',
   'company-data': 'Données entreprise',
   help: 'Aide',

@@ -97,7 +97,7 @@ export async function installAiOfficeApiMocks(page: Page): Promise<void> {
         lastName: 'Owner',
         role: 'OWNER',
         organizationId: ORG_ID,
-        organizationName: 'OptimusTest',
+        organizationName: 'Optimus Test',
       });
     }
 
@@ -117,11 +117,11 @@ export async function installAiOfficeApiMocks(page: Page): Promise<void> {
     if (method === 'GET' && path === '/organizations/current') {
       return json(route, {
         id: ORG_ID,
-        name: 'OptimusTest',
+        name: 'Optimus Test',
         slug: 'optimustest',
         sector: 'Tech',
         onboardingStatus: 'COMPLETED',
-        companyName: 'OptimusTest',
+        companyName: 'Optimus Test',
         billingPlan: 'FREE',
       });
     }

@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "tsc -p tsconfig.app.json --noEmit",
+    "e2e:a11y": "playwright test e2e/a11y.spec.ts",
     "e2e": "playwright test",
     "e2e:live": "E2E_LIVE=1 playwright test",
     "format": "prettier --write \"src/**/*.{ts,html,scss,json}\""
@@ -30,6 +31,7 @@
     "@angular/build": "^21.2.21",
     "@angular/cli": "^21.2.21",
     "@angular/compiler-cli": "^21.2.0",
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.51.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.8.1",

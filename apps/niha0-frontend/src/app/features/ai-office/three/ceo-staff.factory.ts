@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createCartoonAvatar } from './avatar.factory';
 import { CEO_STAFF, type ScenicAssistantDef } from './layout';
-import { createLedPair } from './led.factory';
+import { createLedPair, setLedMode } from './led.factory';
 import type { ScenicRuntime } from './mezzanine.factory';
 import type { ScenePalette } from './types';
 
@@ -63,11 +63,15 @@ function buildStaff(def: ScenicAssistantDef, palette: ScenePalette): ScenicRunti
   const avatar = createCartoonAvatar(def.code, def.accent);
   avatar.userData['scenicId'] = def.id;
   avatar.userData['type'] = 'scenic';
+  avatar.userData['label'] = def.name;
+  avatar.userData['jobTitle'] = def.name;
+  avatar.userData['department'] = 'Direction';
   group.add(avatar);
 
   const leds = createLedPair(def.id);
   leds.position.set(0, 1.52, 0);
   group.add(leds);
+  setLedMode(leds, 'green');
 
   const hit = new THREE.Mesh(
     new THREE.BoxGeometry(1.0, 2.0, 1.0),

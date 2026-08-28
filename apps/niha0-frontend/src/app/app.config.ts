@@ -7,11 +7,13 @@ import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { credentialsInterceptor } from './core/interceptors/credentials.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { ThemeService } from './core/theme/theme.service';
+import { TenancyService } from './core/tenancy/tenancy.service';
 
-function initApp(auth: AuthService, theme: ThemeService): () => Promise<void> {
+function initApp(auth: AuthService, theme: ThemeService, tenancy: TenancyService): () => Promise<void> {
   return async () => {
     theme.setMode(theme.mode());
     await auth.loadMe();
+    await tenancy.refreshOrganizationName();
   };
 }
 
@@ -23,7 +25,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: APP_INITIALIZER,
       useFactory: initApp,
-      deps: [AuthService, ThemeService],
+      deps: [AuthService, ThemeService, TenancyService],
       multi: true,
     },
   ],
