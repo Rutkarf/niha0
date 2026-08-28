@@ -30,6 +30,7 @@ const LINKS: QuickLink[] = [
   { label: 'Stock', route: '/app/wms', keywords: 'inventaire' },
   { label: 'AI Center', route: '/app/ai-center', keywords: 'agents ia' },
   { label: 'AI Office', route: '/app/ai-office', keywords: 'bureau 3d' },
+  { label: 'Marketplace', route: '/app/marketplace', keywords: 'agents studio installation catalogue' },
   { label: 'Notifications', route: '/app/notifications', keywords: 'alertes' },
   { label: 'Paramètres', route: '/app/settings', keywords: 'profil thème billing mfa équipe sécurité' },
   { label: 'Aide', route: '/app/help', keywords: 'faq documentation raccourcis support guides' },
@@ -93,20 +94,30 @@ const LINKS: QuickLink[] = [
     </div>
   `,
   styles: `
+    :host { display: block; }
+    .wrap { display: block; }
     .trigger {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: 0.55rem;
       height: 36px;
-      padding: 0 0.65rem;
+      width: min(26rem, calc(100vw - 34rem));
+      max-width: 100%;
+      padding: 0 0.85rem;
       border-radius: var(--radius-sm);
       border: 1px solid var(--border-color);
       background: var(--bg-elevated);
       color: var(--text-secondary);
       cursor: pointer;
       font-size: var(--fs-sm);
+      justify-content: flex-start;
     }
-    .hint { display: none; }
+    .hint {
+      display: inline;
+      flex: 1;
+      text-align: left;
+      color: var(--text-muted);
+    }
     kbd {
       font-family: var(--font-mono);
       font-size: 0.62rem;
@@ -114,6 +125,7 @@ const LINKS: QuickLink[] = [
       border: 1px solid var(--border-color);
       border-radius: 3px;
       padding: 0 0.25rem;
+      margin-left: auto;
     }
     .overlay {
       position: fixed;
@@ -144,8 +156,12 @@ const LINKS: QuickLink[] = [
     }
     li a:hover { background: var(--bg-hover); text-decoration: none; }
     .empty { padding: 0.75rem; color: var(--text-muted); font-size: var(--fs-sm); }
-    @media (min-width: 900px) {
-      .hint { display: inline; }
+    @media (max-width: 1100px) {
+      .trigger { width: min(20rem, calc(100vw - 30rem)); }
+    }
+    @media (max-width: 800px) {
+      .trigger { width: min(12rem, calc(100vw - 18rem)); }
+      .hint { display: none; }
     }
   `,
 })

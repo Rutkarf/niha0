@@ -12,14 +12,14 @@ export class TenancyService {
 
   readonly organizationId = computed(() => this.auth.user()?.organizationId ?? null);
 
-  /** Nom brut de la société (API, formulaires). */
+  /** Nom brut de l’organisation (API, formulaires). */
   readonly organizationName = computed(() => {
     const fromApi = this.orgNameFromApi();
     if (fromApi) return fromApi;
     return normalizeCompanyName(this.auth.user()?.organizationName) || 'Organisation';
   });
 
-  /** Affichage UI avec préfixe « Société : ». */
+  /** Affichage UI avec préfixe « Organisation : ». */
   readonly companyLabel = computed(() => companyLabel(this.organizationName()));
 
   constructor() {

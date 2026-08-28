@@ -12,8 +12,10 @@ import { TenancyService } from './core/tenancy/tenancy.service';
 function initApp(auth: AuthService, theme: ThemeService, tenancy: TenancyService): () => Promise<void> {
   return async () => {
     theme.setMode(theme.mode());
-    await auth.loadMe();
-    await tenancy.refreshOrganizationName();
+    const me = await auth.loadMe();
+    if (me) {
+      await tenancy.refreshOrganizationName();
+    }
   };
 }
 

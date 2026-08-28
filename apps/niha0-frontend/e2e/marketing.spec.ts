@@ -4,7 +4,7 @@ test.describe('Marketing surfaces', () => {
   test('landing shows brand and CTA', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('link', { name: 'NIHAO' }).first()).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Not For Human Conception/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /Créer mon espace|Create workspace/i }).first()).toBeVisible();
     await expect(page.locator('footer.foot a[href="/privacy"]')).toBeVisible();
   });

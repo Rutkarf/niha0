@@ -88,6 +88,15 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "host": "localhost",
+            "port": 4200,
+            "poll": 2000,
+            "watch": true,
+            "hmr": false,
+            "liveReload": true,
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": {
               "buildTarget": "niha0-frontend:build:production"

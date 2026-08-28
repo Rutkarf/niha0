@@ -54,6 +54,26 @@ export const routes: Routes = [
       import('./features/legal-marketing/terms.page').then((m) => m.TermsPage),
   },
   {
+    path: 'compliance',
+    loadComponent: () =>
+      import('./features/legal-marketing/compliance.page').then((m) => m.CompliancePage),
+  },
+  {
+    path: 'compliance/soc2-type-1',
+    redirectTo: 'compliance',
+    pathMatch: 'full',
+  },
+  {
+    path: 'compliance/w3c',
+    redirectTo: 'compliance',
+    pathMatch: 'full',
+  },
+  {
+    path: 'compliance/owasp',
+    redirectTo: 'compliance',
+    pathMatch: 'full',
+  },
+  {
     path: 'register',
     canActivate: [guestGuard],
     loadComponent: () =>

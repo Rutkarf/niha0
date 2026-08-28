@@ -4,8 +4,14 @@ import { Router } from '@angular/router';
 import { catchError, from, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { environment } from '../../../environments/environment';
+import { isPublicMarketingPath } from '../routing/public-routes';
 
 const RETRY_HEADER = 'X-Niha0-Auth-Retry';
+
+function redirectToLogin(router: Router): void {
+  if (isPublicMarketingPath(router.url)) return;
+  void router.navigate(['/login']);
+}
 
 function isAuthPublicUrl(url: string): boolean {
   return /\/auth\/(login|register|refresh|mfa\/verify|forgot-password|reset-password|accept-invite)(?:\?|$)/.test(
@@ -53,7 +59,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       }
       if (req.headers.has(RETRY_HEADER) || isAuthPublicUrl(req.url)) {
         auth.clearSession();
-        void router.navigate(['/login']);
+        redirectToLogin(router);
         return throwError(() => err);
       }
 
@@ -72,7 +78,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         }),
         catchError((refreshErr) => {
           auth.clearSession();
-          void router.navigate(['/login']);
+          redirectToLogin(router);
           return throwError(() => refreshErr);
         }),
       );

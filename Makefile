@@ -1,27 +1,31 @@
-.PHONY: help dev prod up down build test lint check backend-test frontend-test frontend-build backend-build backend-run frontend-run backup backup-render restore-dry compose-config smoke-health
+.PHONY: help dev dev-stack prod up down build test lint check backend-test frontend-test frontend-build backend-build backend-run frontend-run backup backup-render restore-dry compose-config smoke-health
 
 help:
 	@echo "NIHAO — commandes disponibles"
 	@echo "  make dev            Démarrer PostgreSQL (+ MinIO) via docker-compose.dev.yml"
+	@echo "  make dev-stack      PostgreSQL + backend + frontend (live reload, 1 terminal)"
 	@echo "  make prod           Stack production (docker compose up --build)"
 	@echo "  make down           Arrêter les services Compose"
 	@echo "  make build          Build frontend + backend"
 	@echo "  make lint           Typecheck frontend (tsc --noEmit)"
 	@echo "  make test           Tests frontend + backend"
 	@echo "  make check          lint + test + build"
-  @echo "  make backup         Dump Postgres (scripts/backup-postgres.sh)"
-  @echo "  make backup-render  Dump via DATABASE_URL (Render)"
-  @echo "  make restore-dry    Dry-run restore (DUMP=path.dump)"
-  @echo "  make compose-config Valider docker-compose.yml avec secrets CI"
-  @echo "  make smoke-health   GET /api/actuator/health"
-  @echo "  make backend-run    Lancer le backend (PostgreSQL requis)"
-  @echo "  make frontend-run   Lancer le frontend (ng serve)"
+	@echo "  make backup         Dump Postgres (scripts/backup-postgres.sh)"
+	@echo "  make backup-render  Dump via DATABASE_URL (Render)"
+	@echo "  make restore-dry    Dry-run restore (DUMP=path.dump)"
+	@echo "  make compose-config Valider docker-compose.yml avec secrets CI"
+	@echo "  make smoke-health   GET /api/actuator/health"
+	@echo "  make backend-run    Lancer le backend (PostgreSQL requis)"
+	@echo "  make frontend-run   Lancer le frontend (ng serve)"
 
 # Prefer docker compose; fall back to podman compose when Docker CLI is unavailable.
 COMPOSE ?= $(shell command -v docker >/dev/null 2>&1 && echo docker || echo podman)
 
 dev:
 	$(COMPOSE) compose -f docker-compose.dev.yml up postgres -d
+
+dev-stack:
+	./scripts/dev-local.sh
 
 prod:
 	$(COMPOSE) compose up --build -d

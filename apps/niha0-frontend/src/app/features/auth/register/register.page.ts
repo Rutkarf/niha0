@@ -1,6 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
@@ -101,10 +101,11 @@ import { AUTH_LAYOUT_STYLES } from '../auth-layout.styles';
   `,
   styles: [AUTH_LAYOUT_STYLES],
 })
-export class RegisterPage {
+export class RegisterPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   companyName = '';
   sector = '';
@@ -124,6 +125,16 @@ export class RegisterPage {
     if (s === 'ok') return 'Correct — ajoutez majuscule et chiffre pour plus de sécurité.';
     return 'Trop court — 8 caractères minimum.';
   });
+
+  ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const company = params.get('company');
+    const email = params.get('email');
+    if (company) this.companyName = company;
+    if (email) this.email = email;
+    const navState = history.state as { prefillPassword?: string } | undefined;
+    if (navState?.prefillPassword) this.password = navState.prefillPassword;
+  }
 
   onPwd(): void {
     const p = this.password;

@@ -213,6 +213,12 @@ function agentInitials(name: string): string {
             Glisser pour orbiter · Molette pour zoomer · Clic droit pour pan · Survol / clic bureau · Flèches · Entrée · Échap ferme les panneaux
           </p>
         </div>
+        <footer class="office-bottom-bar">
+          <div class="org-status" aria-live="polite">
+            <span class="pulse" aria-hidden="true"></span>
+            <span class="org">{{ companyDisplayLabel() || 'Organisation : Organisation' }}</span>
+          </div>
+        </footer>
       }
 
       @if (showOnboarding()) {
@@ -313,7 +319,7 @@ function agentInitials(name: string): string {
             aria-labelledby="ceo-panel-title"
           >
             <button type="button" class="close" (click)="closePanels()" aria-label="Fermer le panneau CEO">×</button>
-            <p class="eyebrow">{{ ownerRoleLabel() }} — {{ companyDisplayLabel() || 'Société : Entreprise' }}</p>
+            <p class="eyebrow">{{ ownerRoleLabel() }} — {{ companyDisplayLabel() || 'Organisation : Organisation' }}</p>
             <h2 id="ceo-panel-title">{{ ownerLabel() }}</h2>
             <p class="sub">NIHAO Command Center</p>
             <div class="comic-box" aria-live="polite">
@@ -549,6 +555,38 @@ function agentInitials(name: string): string {
       margin: 0.35rem 0 0.5rem;
       letter-spacing: 0.02em;
       padding: 0 0.75rem;
+    }
+    .office-bottom-bar {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.45rem 0.85rem 0.55rem;
+      border-top: 1px solid var(--border-color);
+      background: color-mix(in srgb, var(--bg-secondary) 55%, transparent);
+    }
+    .org-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      min-width: 0;
+    }
+    .org-status .org {
+      font-weight: 650;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .org-status .pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-success);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-success) 25%, transparent);
+      flex-shrink: 0;
     }
     .state-block {
       margin: 1rem;

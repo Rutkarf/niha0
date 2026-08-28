@@ -49,51 +49,99 @@ interface NavGroup {
 
       <div class="hub-nav" role="group" aria-label="Hub agents IA">
         <a
-          routerLink="/app/ai-office"
+          routerLink="/app/dashboard"
           routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: false }"
-          class="ai-office-link hub-primary"
-          title="AI Office — Salle 3D (O)"
+          class="dashboard-hub-link"
+          title="Dashboard"
           (click)="emitNavigate()"
         >
-          <span class="desk-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-              <circle cx="12" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M6 19c0-3.2 2.7-5 6-5s6 1.8 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-              <path d="M4 21h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <span class="hub-dash-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none">
+              <rect x="3.5" y="3.5" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="13.5" y="3.5" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="3.5" y="13.5" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="13.5" y="13.5" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.5"/>
             </svg>
           </span>
           @if (!collapsed()) {
-            <span class="label">AI Office</span>
-            <span class="hub-hint">3D</span>
-            @if (agents.pendingCount() > 0) {
-              <span class="badge">{{ agents.pendingCount() }}</span>
-            }
+            <span class="hub-dash-label">Dashboard</span>
           }
         </a>
 
         <a
-          routerLink="/app/ai-center"
+          routerLink="/app/marketplace"
           routerLinkActive="active"
-          class="ai-center-link hub-secondary"
-          title="AI Center — Pilotage agents"
+          class="ai-hub-link"
+          title="AI Marketplace"
           (click)="emitNavigate()"
         >
-          <span class="hub-icon" aria-hidden="true" [style.--agent-accent]="'#60A5FA'">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" class="hub-svg">
-              <circle class="hub-node" cx="12" cy="5.5" r="2.2" stroke-width="1.5" />
-              <circle class="hub-node" cx="6" cy="17" r="2.2" stroke-width="1.5" />
-              <circle class="hub-node" cx="18" cy="17" r="2.2" stroke-width="1.5" />
-              <path class="hub-line" d="M12 7.7v3.2M10.2 14.5 7.8 15M13.8 14.5l2.4.5M12 10.9 6.8 15.2M12 10.9l5.2 4.3" stroke-width="1.4" stroke-linecap="round" />
+          <span class="hub-market-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none">
+              <path d="M4 10h16l-1.1 8.2a1 1 0 0 1-1 .8H6.1a1 1 0 0 1-1-.8L4 10Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M8 10V7.2a4 4 0 0 1 8 0V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M9 14h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
           </span>
           @if (!collapsed()) {
-            <span class="label">AI Center</span>
-            @if (agents.pendingCount() > 0) {
-              <span class="badge badge-muted">{{ agents.pendingCount() }}</span>
-            }
+            <span class="hub-ai-label">
+              <span class="hub-ai-prefix">AI</span>
+              <span class="hub-marketplace-name">Marketplace</span>
+            </span>
           }
         </a>
+
+        <div class="hub-row">
+          <a
+            routerLink="/app/ai-office"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: false }"
+            class="ai-office-link hub-primary"
+            title="Ai OFFICE 3D — Salle 3D (O)"
+            (click)="emitNavigate()"
+          >
+            @if (!collapsed()) {
+              <span class="hub-btn-text hub-office-text">
+                <span class="hub-ai-prefix-sm">Ai</span>
+                <span class="hub-office">OFFICE</span>
+              </span>
+              <span class="hub-3d-corner">3D</span>
+              @if (agents.pendingCount() > 0) {
+                <span class="badge">{{ agents.pendingCount() }}</span>
+              }
+            } @else {
+              <span class="hub-office-collapsed" aria-hidden="true">3D</span>
+            }
+          </a>
+
+          <a
+            routerLink="/app/ai-center"
+            routerLinkActive="active"
+            class="ai-center-link hub-secondary"
+            title="Ai Centre — Pilotage agents"
+            (click)="emitNavigate()"
+          >
+            <span class="hub-gear-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none">
+                <circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.5"/>
+                <path
+                  d="M12 3.2v1.6M12 19.2v1.6M4.6 4.6l1.1 1.1M18.3 18.3l1.1 1.1M3.2 12h1.6M19.2 12h1.6M4.6 19.4l1.1-1.1M18.3 5.7l1.1-1.1"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
+            @if (!collapsed()) {
+              <span class="hub-btn-text hub-center-text">
+                <span class="hub-ai-prefix-sm">Ai</span>
+                <span class="hub-centre">Centre</span>
+              </span>
+              @if (agents.pendingCount() > 0) {
+                <span class="badge badge-muted">{{ agents.pendingCount() }}</span>
+              }
+            }
+          </a>
+        </div>
       </div>
 
       <nav class="nav" aria-label="Navigation principale">
@@ -236,7 +284,7 @@ interface NavGroup {
     .hub-nav {
       display: flex;
       flex-direction: column;
-      gap: 0.1rem;
+      gap: 0.18rem;
       margin: 0.45rem 0.28rem 0.35rem;
       padding: 0.22rem;
       border-radius: var(--radius-md);
@@ -248,50 +296,172 @@ interface NavGroup {
       padding: 0.18rem;
       gap: 0.15rem;
     }
-    .ai-office-link {
+    .dashboard-hub-link,
+    .ai-hub-link {
       display: flex;
       align-items: center;
-      gap: 0.35rem;
+      justify-content: center;
+      gap: 0.32rem;
       margin: 0;
-      padding: 0.42rem 0.38rem;
-      height: 2.1rem;
+      padding: 0.34rem 0.3rem;
+      min-height: 1.85rem;
       border-radius: var(--radius-sm);
       background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
       border: 1px solid var(--border-strong);
       color: var(--accent-primary);
       text-decoration: none;
-      font-weight: 700;
-      font-size: 0.72rem;
+      font-weight: 800;
       position: relative;
       white-space: nowrap;
-      overflow: hidden;
+      overflow: visible;
       transition: background var(--transition), box-shadow var(--transition);
     }
+    .hub-dash-icon,
+    .hub-market-icon {
+      width: 0.95rem;
+      height: 0.95rem;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      color: var(--accent-primary);
+    }
+    .hub-dash-icon svg,
+    .hub-market-icon svg { display: block; }
+    .hub-dash-label {
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .hub-ai-label {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.18rem;
+      line-height: 1;
+      overflow: visible;
+      text-overflow: clip;
+    }
+    .hub-ai-prefix {
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+    }
+    .hub-marketplace-name {
+      font-size: 0.5rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .hub-ai-prefix-sm {
+      font-size: 0.46rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      opacity: 0.92;
+    }
+    .dashboard-hub-link:hover,
+    .ai-hub-link:hover { text-decoration: none; background: color-mix(in srgb, var(--accent-primary) 18%, transparent); }
+    .dashboard-hub-link.active,
+    .ai-hub-link.active { box-shadow: inset 0 0 0 1px var(--accent-primary); }
+    .hub-row {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: 0.14rem;
+      min-width: 0;
+    }
+    .collapsed .hub-row {
+      flex-direction: column;
+    }
+    .ai-office-link,
     .ai-center-link {
+      flex: 1 1 0;
+      min-width: 0;
       display: flex;
       align-items: center;
-      gap: 0.32rem;
-      margin: 0 0 0 0.28rem;
-      padding: 0.36rem 0.38rem 0.36rem 0.5rem;
-      height: 1.9rem;
+      justify-content: center;
+      gap: 0.12rem;
+      margin: 0;
+      padding: 0.3rem 0.12rem 0.42rem;
+      min-height: 2.05rem;
       border-radius: var(--radius-sm);
-      background: transparent;
-      border: 1px solid transparent;
-      border-left: 2px solid color-mix(in srgb, #60A5FA 40%, var(--border-color));
-      color: var(--text-secondary);
       text-decoration: none;
-      font-weight: 650;
-      font-size: 0.68rem;
+      font-weight: 700;
+      position: relative;
       white-space: nowrap;
-      overflow: hidden;
+      overflow: visible;
       transition: background var(--transition), color var(--transition), box-shadow var(--transition), border-color var(--transition);
+    }
+    .hub-3d-corner {
+      position: absolute;
+      right: 0.1rem;
+      bottom: 0.1rem;
+      font-size: 0.47rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #fff;
+      text-shadow: 0 0 6px color-mix(in srgb, var(--accent-primary) 70%, #000);
+      line-height: 1;
+      pointer-events: none;
+    }
+    .hub-btn-text {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.08rem;
+      min-width: 0;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1;
+      font-size: 0.5rem;
+      letter-spacing: 0.02em;
+    }
+    .hub-office {
+      color: inherit;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .hub-centre {
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .hub-center-text {
+      letter-spacing: 0.02em;
+      font-size: 0.5rem;
+    }
+    .hub-gear-icon {
+      width: 0.82rem;
+      height: 0.82rem;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      color: currentColor;
+      opacity: 0.9;
+    }
+    .hub-gear-icon svg { display: block; }
+    .hub-office-collapsed {
+      font-size: 0.46rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: color-mix(in srgb, #38bdf8 82%, var(--text-muted));
+    }
+    .ai-office-link {
+      background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+      border: 1px solid var(--border-strong);
+      color: var(--accent-primary);
+    }
+    .ai-center-link {
+      background: transparent;
+      border: 1px solid color-mix(in srgb, #60A5FA 35%, var(--border-color));
+      color: var(--text-secondary);
+      font-weight: 650;
     }
     .collapsed .ai-office-link,
     .collapsed .ai-center-link {
       justify-content: center;
-      padding: 0.42rem 0;
+      padding: 0.36rem 0;
       margin: 0;
-      border-left: none;
     }
     .ai-office-link:hover { text-decoration: none; background: color-mix(in srgb, var(--accent-primary) 18%, transparent); }
     .ai-office-link.active { box-shadow: inset 0 0 0 1px var(--accent-primary); }
@@ -299,48 +469,31 @@ interface NavGroup {
       text-decoration: none;
       background: color-mix(in srgb, #60A5FA 10%, transparent);
       color: var(--text-primary);
-      border-left-color: #60A5FA;
+      border-color: #60A5FA;
     }
     .ai-center-link.active {
       background: color-mix(in srgb, #60A5FA 14%, transparent);
       color: #60A5FA;
       border-color: color-mix(in srgb, #60A5FA 35%, transparent);
-      border-left-color: #60A5FA;
-      box-shadow: inset 3px 0 0 #60A5FA;
+      box-shadow: inset 0 0 0 1px #60A5FA;
     }
     .collapsed .ai-center-link.active {
       box-shadow: inset 0 0 0 1px #60A5FA;
     }
-    .hub-hint {
-      font-size: 0.52rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: color-mix(in srgb, var(--accent-primary) 75%, var(--text-muted));
-      flex-shrink: 0;
+    .hub-row .badge {
+      position: absolute;
+      top: 0.06rem;
+      right: 0.04rem;
+      margin-left: 0;
+      padding: 0.02rem 0.16rem;
+      font-size: 0.44rem;
     }
-    .hub-icon {
-      width: 1rem;
-      height: 1rem;
-      flex-shrink: 0;
-      display: grid;
-      place-items: center;
-    }
-    .hub-svg .hub-node {
-      stroke: var(--agent-accent, #60A5FA);
-      fill: none;
-    }
-    .hub-svg .hub-line {
-      stroke: var(--text-muted);
-      opacity: 0.55;
-    }
-    .ai-center-link:hover .hub-svg .hub-line,
-    .ai-center-link.active .hub-svg .hub-line {
-      stroke: var(--agent-accent, #60A5FA);
-      opacity: 0.85;
-    }
-    .ai-center-link.active .hub-svg .hub-node {
-      filter: drop-shadow(0 0 3px color-mix(in srgb, #60A5FA 55%, transparent));
+    .ai-center-link .badge {
+      top: 0.05rem;
+      right: 0.06rem;
+      padding: 0.01rem 0.1rem;
+      font-size: calc(0.44rem - 1px);
+      line-height: 1;
     }
     .badge {
       margin-left: auto;
@@ -457,12 +610,6 @@ interface NavGroup {
     .nav-item.library-active .desk-svg .agent-person {
       filter: drop-shadow(0 0 3px color-mix(in srgb, var(--agent-accent) 65%, transparent));
     }
-    .ai-office-link .desk-icon {
-      color: var(--accent-primary);
-    }
-    .ai-office-link.active .desk-icon {
-      filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent-primary) 55%, transparent));
-    }
     .label {
       flex: 1;
       min-width: 0;
@@ -533,10 +680,6 @@ export class SidebarComponent implements OnInit {
   });
 
   private readonly baseGroups: NavGroup[] = [
-    {
-      title: 'Accueil',
-      items: [{ label: 'Dashboard', route: '/app/dashboard', icon: 'DB' }],
-    },
     {
       title: 'Espace client',
       items: [

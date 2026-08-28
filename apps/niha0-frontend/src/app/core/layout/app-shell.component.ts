@@ -1,12 +1,11 @@
 import { Component, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AgentStatusService } from '../navigation/agent-status.service';
 import { ThemeService } from '../theme/theme.service';
 import { SidebarComponent } from './sidebar.component';
-import { TenancyService } from '../tenancy/tenancy.service';
 import { ApprovalNotificationsComponent } from './approval-notifications.component';
 import { BreadcrumbsComponent } from '../../shared/ui/breadcrumbs/breadcrumbs.component';
 import { GlobalSearchComponent } from '../../shared/ui/global-search/global-search.component';
@@ -17,6 +16,7 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
     SidebarComponent,
     RouterOutlet,
     RouterLink,
+    RouterLinkActive,
     ApprovalNotificationsComponent,
     BreadcrumbsComponent,
     GlobalSearchComponent,
@@ -44,28 +44,15 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
             >
               <span aria-hidden="true">☰</span>
             </button>
-            <a
-              routerLink="/app/ai-office"
-              class="ao-chip"
-              [class.current]="onAiOffice()"
-              title="Retour AI Office (touche O)"
-              aria-label="Retour AI Office"
-            >
-              <span class="ao-mark" aria-hidden="true">◈</span>
-              <span class="ao-text">AI Office</span>
-              @if (agents.pendingCount() > 0) {
-                <span class="pill">{{ agents.pendingCount() }}</span>
-              }
-            </a>
-            <div class="topbar-title">
-              <span class="pulse" aria-hidden="true"></span>
-              <span class="org">{{ tenancy.companyLabel() }}</span>
-              <span class="sep">·</span>
-              <span class="user-name">{{ auth.user()?.firstName }} {{ auth.user()?.lastName }}</span>
-            </div>
-          </div>
-          <div class="topbar-right">
-            <app-global-search />
+            @if (auth.user(); as user) {
+              <a routerLink="/app/settings" class="user-chip" title="Paramètres" aria-label="Paramètres du compte">
+                <span class="avatar" aria-hidden="true">{{ initials(user.firstName, user.lastName) }}</span>
+                <span class="meta">
+                  <span class="name">{{ user.firstName }} {{ user.lastName }}</span>
+                  <span class="role">{{ user.role }}</span>
+                </span>
+              </a>
+            }
             <a routerLink="/app/notifications" class="icon-link" title="Notifications" aria-label="Notifications">
               <span aria-hidden="true">◎</span>
             </a>
@@ -76,15 +63,27 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
                 <span class="pending-inline">· {{ agents.pendingCount() }} à valider</span>
               }
             </span>
-            @if (auth.user(); as user) {
-              <a routerLink="/app/settings" class="user-chip" title="Paramètres" aria-label="Paramètres du compte">
-                <span class="avatar" aria-hidden="true">{{ initials(user.firstName, user.lastName) }}</span>
-                <span class="meta">
-                  <span class="name">{{ user.firstName }} {{ user.lastName }}</span>
-                  <span class="role">{{ user.role }}</span>
-                </span>
-              </a>
-            }
+          </div>
+          <div class="topbar-center">
+            <app-global-search />
+          </div>
+          <div class="topbar-right">
+            <a
+              routerLink="/app/marketplace"
+              routerLinkActive="active"
+              class="marketplace-link"
+              title="Marketplace"
+              aria-label="Marketplace"
+            >
+              <span class="marketplace-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none">
+                  <path d="M4 10h16l-1.1 8.2a1 1 0 0 1-1 .8H6.1a1 1 0 0 1-1-.8L4 10Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                  <path d="M8 10V7.2a4 4 0 0 1 8 0V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M9 14h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span class="marketplace-label">Marketplace</span>
+            </a>
           </div>
         </header>
         <div class="content">
@@ -169,9 +168,9 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
     }
     .topbar {
       height: var(--header-height, 58px);
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
-      justify-content: space-between;
       padding: 0 var(--space-5) 0 var(--space-5);
       gap: var(--space-4);
       background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
@@ -181,78 +180,75 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
       top: 0;
       z-index: var(--z-sticky);
     }
-    .topbar-left, .topbar-right {
+    .topbar-left, .topbar-center, .topbar-right {
       display: flex;
       align-items: center;
       gap: var(--space-3);
       min-width: 0;
     }
-    .ao-chip {
+    .topbar-left {
+      justify-self: start;
+      justify-content: flex-start;
+    }
+    .topbar-center {
+      justify-self: center;
+      justify-content: center;
+      padding-inline: var(--space-4);
+    }
+    .topbar-right {
+      justify-self: end;
+      justify-content: flex-end;
+    }
+    .marketplace-link {
       display: inline-flex;
       align-items: center;
       gap: var(--space-2);
-      padding: var(--space-1) var(--space-3);
+      height: 36px;
+      padding: 0 var(--space-3);
       border-radius: var(--radius-sm);
       border: 1px solid var(--border-strong);
+      background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-elevated));
       color: var(--accent-primary);
       text-decoration: none;
       font-size: var(--fs-sm);
       font-weight: var(--fw-bold);
-      letter-spacing: 0.02em;
-      background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
-      transition: background var(--transition), border-color var(--transition);
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background var(--transition), box-shadow var(--transition);
     }
-    .ao-chip:hover {
-      background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+    .marketplace-link:hover {
+      background: color-mix(in srgb, var(--accent-primary) 18%, var(--bg-elevated));
       text-decoration: none;
     }
-    .ao-chip.current {
-      background: color-mix(in srgb, var(--accent-primary) 22%, transparent);
+    .marketplace-link.active {
       box-shadow: inset 0 0 0 1px var(--accent-primary);
     }
-    .ao-mark { font-size: var(--fs-base); line-height: 1; }
-    .pill {
-      background: var(--accent-warning);
-      color: var(--on-warning);
-      border-radius: var(--radius-sm);
-      padding: 0.05rem var(--space-2);
-      font-size: var(--fs-xs);
-      font-weight: var(--fw-extrabold);
-      font-variant-numeric: tabular-nums;
-    }
-    .topbar-title {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-size: var(--fs-md);
-      color: var(--text-secondary);
-      min-width: 0;
-    }
-    .org { font-weight: var(--fw-semibold); color: var(--text-primary); }
-    .sep { color: var(--text-muted); }
-    .user-name {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .pulse {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent-success);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-success) 25%, transparent);
+    .marketplace-icon {
+      display: grid;
+      place-items: center;
       flex-shrink: 0;
     }
+    .marketplace-icon svg { display: block; }
     .agent-mini {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 var(--space-3);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
       font-size: var(--fs-sm);
       color: var(--text-muted);
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .pending-inline { color: var(--accent-warning); font-weight: var(--fw-semibold); }
     .user-chip {
       display: flex;
       align-items: center;
       gap: var(--space-2);
+      flex-shrink: 0;
       padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
@@ -349,17 +345,19 @@ import { GlobalSearchComponent } from '../../shared/ui/global-search/global-sear
         z-index: calc(var(--z-sidebar) - 1);
         cursor: pointer;
       }
-      .agent-mini, .topbar-title .user-name, .topbar-title .sep, .meta .name, .ao-text { display: none; }
+      .agent-mini, .meta .name { display: none; }
     }
     @media (max-width: 800px) {
-      .topbar-title { display: none; }
+      .topbar { grid-template-columns: auto 1fr auto; }
+      .topbar-center { justify-self: center; }
+      .marketplace-label { display: none; }
+      .marketplace-link { padding: 0; width: 36px; justify-content: center; }
     }
   `],
 })
 export class AppShellComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   readonly agents = inject(AgentStatusService);
-  readonly tenancy = inject(TenancyService);
   private readonly realtime = inject(RealtimeService);
   private readonly router = inject(Router);
   private readonly theme = inject(ThemeService);

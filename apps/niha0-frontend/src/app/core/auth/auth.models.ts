@@ -39,6 +39,8 @@ export interface LoginRequest {
   password: string;
 }
 
+export type AuthDrawerMode = 'login' | 'register';
+
 export interface MfaVerifyRequest {
   mfaToken: string;
   code: string;

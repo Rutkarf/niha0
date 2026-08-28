@@ -6,8 +6,8 @@ export function normalizeCompanyName(name: string | null | undefined): string {
   return trimmed;
 }
 
-/** Libellé UI : société cliente (ex. Société : Optimus Test). */
+/** Libellé UI : organisation cliente (ex. Organisation : Optimus Test). */
 export function companyLabel(name: string | null | undefined, fallback = 'Organisation'): string {
   const normalized = normalizeCompanyName(name) || fallback;
-  return `Société : ${normalized}`;
+  return `Organisation : ${normalized}`;
 }
