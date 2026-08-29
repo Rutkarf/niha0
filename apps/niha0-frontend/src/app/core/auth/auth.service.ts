@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { normalizeCompanyName } from '../tenancy/company-label';
 import { AnalyticsService } from '../analytics/analytics.service';
-import { LoginRequest, TokenResponse, UserMe, AuthDrawerMode } from './auth.models';
+import { LoginRequest, TokenResponse, UserMe } from './auth.models';
 
 const LEGACY_ACCESS_KEY = 'niha0_access_token';
 const LEGACY_REFRESH_KEY = 'niha0_refresh_token';
@@ -23,21 +23,12 @@ export class AuthService {
 
   private readonly userSignal = signal<UserMe | null>(null);
   private readonly loadingSignal = signal(false);
-  private readonly drawerOpenSignal = signal(false);
-  private readonly drawerModeSignal = signal<AuthDrawerMode>('login');
-  private readonly drawerErrorSignal = signal<string | null>(null);
-  private readonly oauthRedirectingSignal = signal(false);
-  private enabledOAuthProviders = signal<string[]>([]);
 
   /** Single-flight refresh so concurrent 401s share one POST /auth/refresh. */
   private refreshInFlight: Promise<string> | null = null;
 
   readonly user = this.userSignal.asReadonly();
   readonly loading = this.loadingSignal.asReadonly();
-  readonly drawerOpen = this.drawerOpenSignal.asReadonly();
-  readonly drawerMode = this.drawerModeSignal.asReadonly();
-  readonly drawerError = this.drawerErrorSignal.asReadonly();
-  readonly oauthRedirecting = this.oauthRedirectingSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.userSignal() !== null);
   readonly accessToken = computed(() => this.accessTokenSignal());
 
@@ -47,40 +38,6 @@ export class AuthService {
 
   getAccessToken(): string | null {
     return this.accessTokenSignal();
-  }
-
-  openDrawer(mode: AuthDrawerMode = 'login'): void {
-    this.drawerErrorSignal.set(null);
-    this.drawerModeSignal.set(mode);
-    this.drawerOpenSignal.set(true);
-  }
-
-  closeDrawer(): void {
-    this.drawerOpenSignal.set(false);
-    this.drawerErrorSignal.set(null);
-  }
-
-  setDrawerMode(mode: AuthDrawerMode): void {
-    this.drawerErrorSignal.set(null);
-    this.drawerModeSignal.set(mode);
-  }
-
-  setDrawerError(message: string | null): void {
-    this.drawerErrorSignal.set(message);
-  }
-
-  setEnabledOAuthProviders(providers: string[]): void {
-    this.enabledOAuthProviders.set(providers);
-  }
-
-  isOAuthProviderEnabled(providerId: string): boolean {
-    return this.enabledOAuthProviders().includes(providerId);
-  }
-
-  startOAuth(providerId: string): void {
-    if (!this.isOAuthProviderEnabled(providerId)) return;
-    this.oauthRedirectingSignal.set(true);
-    window.location.href = `${this.baseUrl}/oauth2/authorization/${providerId}`;
   }
 
   async login(credentials: LoginRequest): Promise<void> {

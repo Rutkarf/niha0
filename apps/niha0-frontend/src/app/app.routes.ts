@@ -54,6 +54,11 @@ export const routes: Routes = [
       import('./features/legal-marketing/terms.page').then((m) => m.TermsPage),
   },
   {
+    path: 'cgu',
+    loadComponent: () =>
+      import('./features/legal-marketing/cgu.page').then((m) => m.CguPage),
+  },
+  {
     path: 'compliance',
     loadComponent: () =>
       import('./features/legal-marketing/compliance.page').then((m) => m.CompliancePage),

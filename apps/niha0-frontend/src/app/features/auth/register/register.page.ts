@@ -7,51 +7,64 @@ import { environment } from '../../../../environments/environment';
 import { AuthService, MFA_TOKEN_KEY } from '../../../core/auth/auth.service';
 import { TokenResponse } from '../../../core/auth/auth.models';
 import { mapHttpError } from '../../../core/api/http-error.util';
-import { AUTH_LAYOUT_STYLES } from '../auth-layout.styles';
+import { PublicSiteShellComponent } from '../../marketing-site/public-site-shell.component';
+import { PUBLIC_AUTH_STYLES } from '../../marketing-site/public-content.styles';
+import {
+  AUDIENCE_ROLES,
+  AudienceRoleId,
+  audienceById,
+  isAudienceRoleId,
+} from '../../marketing-site/audience-roles';
 
 @Component({
   selector: 'app-register-page',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, PublicSiteShellComponent],
   template: `
-    <div class="login-page">
-      <div class="atmosphere" aria-hidden="true"></div>
-      <div class="login-layout">
-        <section class="brand-panel">
-          <p class="eyebrow">Création d’espace professionnel</p>
-          <h1 class="brand-type">NIHAO</h1>
-          <p class="acronym">Network Intelligence Hub Access Open</p>
-          <p class="pitch">
-            Créez votre entreprise, personnalisez le bureau 3D, configurez vos agents IA et importez vos données.
-          </p>
-        </section>
-
-        <section class="login-card" aria-labelledby="register-title">
-          <header class="login-header">
-            <h2 id="register-title">Compte professionnel</h2>
-            <p>Étape 1 sur 2 · Identifiants (puis onboarding)</p>
+    <app-public-site-shell pageTitle="Créer un espace">
+      <div class="auth-wrap">
+        <section class="auth-card" aria-labelledby="register-title">
+          <header class="auth-header">
+            <h2 id="register-title">Créer un espace</h2>
+            <p>Profil {{ role().label }} · étape 1 sur 2 (puis onboarding)</p>
           </header>
           <div class="progress-dots" aria-hidden="true">
             <i class="on"></i><i></i>
           </div>
-          <form (ngSubmit)="submit()" class="login-form" novalidate>
+          <form (ngSubmit)="submit()" class="auth-form register-form" novalidate>
             <div class="form-group">
-              <label class="label" for="companyName">Nom de l’entreprise *</label>
-              <input
-                id="companyName"
+              <label class="label" for="audienceRole">Profil utilisateur *</label>
+              <select
+                id="audienceRole"
                 class="input"
-                name="companyName"
-                [(ngModel)]="companyName"
-                required
-                [attr.aria-invalid]="touched() && !companyName.trim()"
-              />
-              @if (touched() && !companyName.trim()) {
-                <p class="field-hint form-error">Le nom de l’entreprise est obligatoire.</p>
-              }
+                name="audienceRole"
+                [ngModel]="roleId()"
+                (ngModelChange)="onRoleChange($event)"
+              >
+                @for (item of roles; track item.id) {
+                  <option [value]="item.id">{{ item.label }} — {{ item.short }}</option>
+                }
+              </select>
             </div>
-            <div class="form-group">
-              <label class="label" for="sector">Secteur</label>
-              <input id="sector" class="input" name="sector" [(ngModel)]="sector" placeholder="Services, Industrie…" />
+            <div class="row-2">
+              <div class="form-group">
+                <label class="label" for="companyName">{{ role().companyLabel }} *</label>
+                <input
+                  id="companyName"
+                  class="input"
+                  name="companyName"
+                  [(ngModel)]="companyName"
+                  required
+                  [attr.aria-invalid]="touched() && !companyName.trim()"
+                />
+              </div>
+              <div class="form-group">
+                <label class="label" for="sector">Secteur</label>
+                <input id="sector" class="input" name="sector" [(ngModel)]="sector" [placeholder]="role().sectorDefault" />
+              </div>
             </div>
+            @if (touched() && !companyName.trim()) {
+              <p class="field-hint form-error">Ce champ est obligatoire.</p>
+            }
             <div class="row-2">
               <div class="form-group">
                 <label class="label" for="firstName">Prénom *</label>
@@ -63,7 +76,7 @@ import { AUTH_LAYOUT_STYLES } from '../auth-layout.styles';
               </div>
             </div>
             <div class="form-group">
-              <label class="label" for="email">E-mail professionnel *</label>
+              <label class="label" for="email">E-mail pro *</label>
               <input id="email" class="input" type="email" name="email" [(ngModel)]="email" required autocomplete="username" />
             </div>
             <div class="form-group">
@@ -90,22 +103,88 @@ import { AUTH_LAYOUT_STYLES } from '../auth-layout.styles';
             @if (error()) {
               <p class="error" role="alert">{{ error() }}</p>
             }
-            <button type="submit" class="btn btn-primary login-btn" [class.is-loading]="loading()" [disabled]="loading()">
+            <button type="submit" class="btn btn-primary auth-btn" [class.is-loading]="loading()" [disabled]="loading()">
               {{ loading() ? 'Création…' : 'Créer mon espace' }}
             </button>
           </form>
-          <p class="demo-hint">Déjà un compte ? <a routerLink="/login">Connexion</a></p>
+          <p class="hint">Déjà un compte ? <a routerLink="/login">Connexion</a></p>
         </section>
       </div>
-    </div>
+    </app-public-site-shell>
   `,
-  styles: [AUTH_LAYOUT_STYLES],
+  styles: [
+    PUBLIC_AUTH_STYLES,
+    `
+    .auth-card {
+      width: min(520px, 100%);
+    }
+    .progress-dots {
+      display: flex;
+      gap: 0.35rem;
+      margin-bottom: 0.45rem;
+    }
+    .progress-dots i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border-color);
+    }
+    .progress-dots i.on {
+      background: var(--accent-primary);
+    }
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+    }
+    .field-hint {
+      margin: 0.15rem 0 0.35rem;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+    .form-error {
+      color: var(--accent-danger);
+    }
+    .pwd-meter {
+      display: flex;
+      gap: 3px;
+      margin-top: 0.25rem;
+    }
+    .pwd-meter span {
+      flex: 1;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--border-color);
+    }
+    .pwd-meter span.on {
+      background: var(--accent-primary);
+    }
+    .pwd-meter.weak span.on {
+      background: var(--accent-danger);
+    }
+    .pwd-meter.ok span.on {
+      background: var(--accent-warning);
+    }
+    .pwd-meter.strong span.on {
+      background: var(--accent-success);
+    }
+    @media (max-width: 40rem) {
+      .row-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  `,
+  ],
 })
 export class RegisterPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+
+  readonly roles = AUDIENCE_ROLES;
+  readonly roleId = signal<AudienceRoleId>('entreprise');
+  readonly role = computed(() => audienceById(this.roleId()));
 
   companyName = '';
   sector = '';
@@ -128,12 +207,26 @@ export class RegisterPage implements OnInit {
 
   ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;
+    const role = params.get('role');
+    if (isAudienceRoleId(role)) {
+      this.roleId.set(role);
+      this.sector = audienceById(role).sectorDefault;
+    }
     const company = params.get('company');
     const email = params.get('email');
     if (company) this.companyName = company;
     if (email) this.email = email;
     const navState = history.state as { prefillPassword?: string } | undefined;
     if (navState?.prefillPassword) this.password = navState.prefillPassword;
+  }
+
+  onRoleChange(value: string): void {
+    if (!isAudienceRoleId(value)) return;
+    this.roleId.set(value);
+    const def = audienceById(value).sectorDefault;
+    if (!this.sector.trim() || AUDIENCE_ROLES.some((r) => r.sectorDefault === this.sector)) {
+      this.sector = def;
+    }
   }
 
   onPwd(): void {
@@ -159,7 +252,7 @@ export class RegisterPage implements OnInit {
           firstName: this.firstName.trim(),
           lastName: this.lastName.trim(),
           companyName: this.companyName.trim(),
-          sector: this.sector.trim() || 'Services',
+          sector: this.sector.trim() || this.role().sectorDefault,
         }),
       );
       if (tokens.mfaRequired && tokens.mfaToken) {
