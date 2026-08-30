@@ -225,7 +225,7 @@ type CguTab = 'usage' | 'ip' | 'conduct' | 'api' | 'support';
                     <ul>
                       <li><a routerLink="/terms">Conditions d’utilisation</a></li>
                       <li><a routerLink="/privacy">Confidentialité</a></li>
-                      <li><a routerLink="/pricing">Tarifs</a></li>
+                      <li><a routerLink="/login">Tarifs</a></li>
                     </ul>
                   </article>
                 </div>

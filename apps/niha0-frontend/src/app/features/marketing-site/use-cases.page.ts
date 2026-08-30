@@ -26,7 +26,7 @@ import {
           </div>
           <div class="page-meta">
             <span class="meta-chip">{{ role().short }}</span>
-            <a class="meta-chip meta-cta" [routerLink]="['/pricing']" [queryParams]="{ role: role().id }">
+            <a class="meta-chip meta-cta" [routerLink]="['/login']" [queryParams]="{ role: role().id }">
               Voir l’offre {{ role().label }}
             </a>
             <a class="meta-chip meta-cta" [routerLink]="['/register']" [queryParams]="{ role: role().id }">
@@ -114,7 +114,7 @@ import {
                   <h3>Plan {{ role().recommendedPlan }}</h3>
                   <p>
                     Offre recommandée pour ce profil.
-                    <a [routerLink]="['/pricing']" [queryParams]="{ role: role().id }">Comparer →</a>
+                    <a [routerLink]="['/login']" [queryParams]="{ role: role().id }">Comparer →</a>
                   </p>
                 </article>
               </div>

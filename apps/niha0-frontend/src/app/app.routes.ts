@@ -11,8 +11,8 @@ export const routes: Routes = [
   },
   {
     path: 'pricing',
-    loadComponent: () =>
-      import('./features/marketing-site/pricing.page').then((m) => m.PricingPage),
+    redirectTo: 'login',
+    pathMatch: 'full',
   },
   {
     path: 'use-cases',

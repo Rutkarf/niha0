@@ -147,7 +147,7 @@ type TermsTab = 'object' | 'account' | 'agents' | 'billing' | 'liability';
                     <h3>Limites d’usage</h3>
                     <p>
                       Les quotas sièges, stockage et actions IA sont définis par le plan
-                      (<a routerLink="/pricing">Tarifs</a>. Un dépassement peut entraîner un
+                      (<a routerLink="/login">Tarifs</a>. Un dépassement peut entraîner un
                       throttling ou une mise à niveau.
                     </p>
                   </article>

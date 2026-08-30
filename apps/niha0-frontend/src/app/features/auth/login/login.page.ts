@@ -9,7 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ApiService } from '../../../core/api/api.service';
@@ -22,6 +22,7 @@ import {
   AUDIENCE_ROLES,
   AudienceRoleId,
   audienceById,
+  isAudienceRoleId,
   MAX_PLAN_HIGHLIGHTS,
 } from '../../marketing-site/audience-roles';
 
@@ -29,7 +30,7 @@ import {
   selector: 'app-login-page',
   imports: [FormsModule, RouterLink, PublicSiteShellComponent],
   template: `
-    <app-public-site-shell pageTitle="Connexion">
+    <app-public-site-shell pageTitle="Connexion" [continueSignupParams]="continueSignupParams()">
       <div class="auth-wrap login-split">
         <section class="auth-card signin-panel" aria-labelledby="login-title">
           <header class="auth-header">
@@ -100,60 +101,62 @@ import {
 
         <section class="auth-card signup-panel" aria-labelledby="profiles-title">
           <header class="auth-header signup-head">
-            <p class="panel-kicker">Nouveau sur NIHAO</p>
+            <p class="signup-welcome">Bienvenue sur Niha0</p>
             <h2 id="profiles-title">Créer un espace</h2>
           </header>
 
           <div class="profile-field" #profileDropdown>
-            <label class="label" id="profile-label" for="profile-trigger">Profil</label>
-            <button
-              type="button"
-              id="profile-trigger"
-              class="profile-trigger"
-              [class.is-open]="menuOpen()"
-              aria-haspopup="listbox"
-              [attr.aria-expanded]="menuOpen()"
-              aria-controls="profile-menu"
-              aria-labelledby="profile-label profile-trigger"
-              (click)="toggleMenu()"
-              (keydown)="onTriggerKeydown($event)"
-            >
-              <span class="profile-trigger-copy">
-                <span class="profile-trigger-label">{{ selectedRole().label }}</span>
-                <span class="profile-trigger-sep" aria-hidden="true">·</span>
-                <span class="profile-trigger-short">{{ selectedRole().short }}</span>
-              </span>
-              <span class="profile-chevron" aria-hidden="true"></span>
-            </button>
-
-            @if (menuOpen()) {
-              <ul
-                id="profile-menu"
-                class="profile-menu"
-                role="listbox"
-                aria-labelledby="profile-label"
-                [attr.aria-activedescendant]="'profile-' + selectedRoleId()"
+            <label class="label profile-label" id="profile-label" for="profile-trigger">Profil :</label>
+            <div class="profile-control">
+              <button
+                type="button"
+                id="profile-trigger"
+                class="profile-trigger"
+                [class.is-open]="menuOpen()"
+                aria-haspopup="listbox"
+                [attr.aria-expanded]="menuOpen()"
+                aria-controls="profile-menu"
+                aria-labelledby="profile-label profile-trigger"
+                (click)="toggleMenu()"
+                (keydown)="onTriggerKeydown($event)"
               >
-                @for (role of roles; track role.id) {
-                  <li role="presentation">
-                    <button
-                      type="button"
-                      class="profile-option"
-                      role="option"
-                      [id]="'profile-' + role.id"
-                      [attr.aria-selected]="selectedRoleId() === role.id"
-                      [class.is-selected]="selectedRoleId() === role.id"
-                      (click)="selectRole(role.id)"
-                    >
-                      <span class="profile-option-label">{{ role.label }}</span>
-                      <span class="profile-option-sep" aria-hidden="true">·</span>
-                      <span class="profile-option-short">{{ role.short }}</span>
-                      <span class="profile-check" aria-hidden="true">✓</span>
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
+                <span class="profile-trigger-copy">
+                  <span class="profile-trigger-label">{{ selectedRole().label }}</span>
+                  <span class="profile-trigger-sep" aria-hidden="true">·</span>
+                  <span class="profile-trigger-short">{{ selectedRole().short }}</span>
+                </span>
+                <span class="profile-chevron" aria-hidden="true"></span>
+              </button>
+
+              @if (menuOpen()) {
+                <ul
+                  id="profile-menu"
+                  class="profile-menu"
+                  role="listbox"
+                  aria-labelledby="profile-label"
+                  [attr.aria-activedescendant]="'profile-' + selectedRoleId()"
+                >
+                  @for (role of roles; track role.id) {
+                    <li role="presentation">
+                      <button
+                        type="button"
+                        class="profile-option"
+                        role="option"
+                        [id]="'profile-' + role.id"
+                        [attr.aria-selected]="selectedRoleId() === role.id"
+                        [class.is-selected]="selectedRoleId() === role.id"
+                        (click)="selectRole(role.id)"
+                      >
+                        <span class="profile-option-label">{{ role.label }}</span>
+                        <span class="profile-option-sep" aria-hidden="true">·</span>
+                        <span class="profile-option-short">{{ role.short }}</span>
+                        <span class="profile-check" aria-hidden="true">✓</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
           </div>
 
           <aside class="profile-preview" aria-live="polite">
@@ -162,18 +165,13 @@ import {
                 <h3 class="offer-title">{{ selectedRole().label }}</h3>
                 <span class="offer-short">{{ selectedRole().short }}</span>
               </div>
-              <div class="offer-chips">
-                <span class="plan-chip">Recommandé · {{ selectedRole().recommendedPlan }}</span>
-                <span class="meta-pill">HT sauf mention</span>
+              <div class="offer-head-meta">
+                <span class="offer-price-note">Les prix affichés sont indicatifs</span>
+                <span class="meta-pill offer-meta-ht">HT sauf mention</span>
               </div>
             </header>
 
-            <p class="role-intro">
-              {{ selectedRole().blurb }}
-              <span class="role-intro-note">
-                Plan conseillé <em>{{ selectedRole().recommendedPlan }}</em> · prix indicatifs (devis secteur public & partenaires).
-              </span>
-            </p>
+            <p class="role-intro-blurb">{{ selectedRole().blurb }}</p>
 
             <div class="offer-plans">
               @for (plan of selectedRole().plans; track plan.code) {
@@ -219,7 +217,7 @@ import {
             </div>
 
             <div class="offer-modules">
-              <p class="offer-section-label">Modules utiles · {{ selectedRole().label }}</p>
+              <h3 class="offer-section-title">Modules utiles pour {{ selectedRole().label }}</h3>
               <div class="offer-modules-grid">
                 @for (mod of selectedRole().modules; track mod.title) {
                   <article class="offer-tile">
@@ -232,22 +230,13 @@ import {
                   <span class="tile-kicker">Parcours</span>
                   <h4>Cas d’usage</h4>
                   <p>
-                    Wedges métier (Commercial, Ops, Agents) & adoption.
+                    Voir les wedges métier (Commercial, Ops, Agents) et le chemin d’adoption.
                     <a routerLink="/use-cases" [queryParams]="{ role: selectedRoleId() }">Ouvrir →</a>
                   </p>
                 </article>
               </div>
             </div>
 
-            <footer class="offer-foot">
-              <span>
-                Secteur « {{ selectedRole().sectorDefault }} » · {{ selectedRole().companyLabel }} ·
-                {{ selectedRole().plans.length }} offres
-              </span>
-              <button type="button" class="offer-foot-link" (click)="continueSignup()">
-                Continuer vers l’inscription →
-              </button>
-            </footer>
           </aside>
 
           <div class="signup-actions">
@@ -278,6 +267,12 @@ import {
       width: 100%;
       max-width: none;
     }
+    .login-split .signup-panel.auth-card {
+      border-color: color-mix(in srgb, var(--border-color) 72%, var(--accent-primary));
+      box-shadow:
+        var(--shadow-lg),
+        0 10px 32px color-mix(in srgb, var(--bg-primary) 48%, transparent);
+    }
     .signin-panel,
     .signup-panel {
       width: 100%;
@@ -300,8 +295,9 @@ import {
       align-self: stretch;
       max-height: 100%;
       height: 100%;
-      padding: 0.55rem 0.75rem 0.6rem;
-      gap: 0.38rem;
+      padding: clamp(0.78rem, 1.7vh, 1rem) clamp(0.88rem, 1.9vw, 1.15rem)
+        clamp(0.75rem, 1.5vh, 0.95rem);
+      gap: clamp(0.55rem, 1.3vh, 0.75rem);
       isolation: isolate;
     }
     .panel-kicker {
@@ -347,17 +343,61 @@ import {
     .signup-panel .auth-header {
       flex-shrink: 0;
     }
+    .signup-head {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      grid-template-rows: auto;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+    }
+    .signup-welcome {
+      margin: 0;
+      grid-column: 1;
+      grid-row: 1;
+      justify-self: start;
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      background: linear-gradient(
+        90deg,
+        var(--text-secondary) 0%,
+        color-mix(in srgb, var(--accent-primary) 55%, var(--text-primary)) 100%
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
     .signup-head h2 {
       margin: 0;
-      font-size: clamp(1rem, 1.8vw, 1.15rem);
+      grid-column: 2;
+      grid-row: 1;
+      text-align: center;
+      font-size: clamp(1.05rem, 1.9vw, 1.22rem);
+      letter-spacing: 0.015em;
+      text-shadow: 0 1px 18px color-mix(in srgb, var(--accent-primary) 22%, transparent);
     }
     .profile-field {
-      position: relative;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.4rem 0.75rem;
       flex-shrink: 0;
       z-index: 5;
+      padding: 0.15rem 0.05rem 0.05rem;
     }
-    .profile-field .label {
-      margin-bottom: 0.25rem;
+    .profile-label {
+      margin: 0;
+      white-space: nowrap;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .profile-control {
+      position: relative;
+      min-width: 0;
     }
     .profile-trigger {
       appearance: none;
@@ -366,24 +406,36 @@ import {
       justify-content: space-between;
       gap: 0.55rem;
       width: 100%;
-      min-height: 2.25rem;
+      min-height: 2.45rem;
       margin: 0;
-      padding: 0.35rem 0.7rem;
-      border: 1px solid var(--border-color);
+      padding: 0.42rem 0.78rem;
+      border: 1px solid color-mix(in srgb, var(--border-color) 82%, var(--accent-primary));
       border-radius: var(--radius-md);
-      background: var(--bg-elevated);
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--bg-elevated) 96%, var(--accent-primary)) 0%,
+        var(--bg-elevated) 100%
+      );
       color: var(--text-primary);
       font-family: var(--font-sans);
       text-align: left;
       cursor: pointer;
+      box-shadow:
+        0 1px 0 color-mix(in srgb, var(--text-primary) 6%, transparent),
+        0 4px 14px color-mix(in srgb, var(--bg-primary) 55%, transparent);
       transition:
         border-color var(--duration-fast) var(--ease-standard),
         background var(--duration-fast) var(--ease-standard),
-        box-shadow var(--duration-fast) var(--ease-standard);
+        box-shadow var(--duration-fast) var(--ease-standard),
+        transform var(--duration-fast) var(--ease-standard);
     }
     .profile-trigger:hover {
-      border-color: color-mix(in srgb, var(--border-color) 55%, var(--accent-primary));
-      background: color-mix(in srgb, var(--bg-elevated) 88%, var(--bg-primary));
+      border-color: color-mix(in srgb, var(--border-color) 35%, var(--accent-primary));
+      background: color-mix(in srgb, var(--bg-elevated) 84%, var(--accent-primary));
+      box-shadow:
+        0 1px 0 color-mix(in srgb, var(--text-primary) 8%, transparent),
+        0 6px 18px color-mix(in srgb, var(--accent-primary) 10%, transparent);
+      transform: translateY(-1px);
     }
     .profile-trigger.is-open,
     .profile-trigger:focus-visible {
@@ -439,18 +491,21 @@ import {
     .profile-menu {
       position: absolute;
       inset-inline: 0;
-      top: calc(100% + 0.3rem);
+      top: calc(100% + 0.35rem);
       z-index: 6;
       margin: 0;
-      padding: 0.3rem;
+      padding: 0.38rem;
       list-style: none;
-      border: 1px solid var(--border-color);
+      border: 1px solid color-mix(in srgb, var(--border-color) 70%, var(--accent-primary));
       border-radius: var(--radius-md);
-      background: var(--bg-elevated);
-      box-shadow: var(--shadow-lg);
+      background: color-mix(in srgb, var(--bg-elevated) 94%, var(--bg-primary));
+      backdrop-filter: blur(14px);
+      box-shadow:
+        var(--shadow-lg),
+        0 12px 28px color-mix(in srgb, var(--bg-primary) 65%, transparent);
       display: flex;
       flex-direction: column;
-      gap: 0.12rem;
+      gap: 0.15rem;
       max-height: min(15rem, 42dvh);
       overflow: auto;
       animation: profile-menu-in var(--duration-base) var(--ease-standard);
@@ -544,23 +599,50 @@ import {
       flex: 1 1 auto;
       min-height: 0;
       margin: 0;
-      padding: 0.42rem 0.5rem;
-      border-radius: var(--radius-md);
-      border: 1px solid color-mix(in srgb, var(--accent-primary) 28%, var(--border-color));
-      background: color-mix(in srgb, var(--bg-elevated) 94%, var(--accent-primary));
+      padding: clamp(0.58rem, 1.3vh, 0.72rem) clamp(0.62rem, 1.5vw, 0.82rem)
+        clamp(0.55rem, 1.1vh, 0.68rem);
+      border-radius: calc(var(--radius-md) + 2px);
+      border: 1px solid color-mix(in srgb, var(--accent-primary) 32%, var(--border-color));
+      background:
+        radial-gradient(
+          120% 80% at 50% -20%,
+          color-mix(in srgb, var(--accent-primary) 14%, transparent) 0%,
+          transparent 55%
+        ),
+        color-mix(in srgb, var(--bg-elevated) 92%, var(--accent-primary));
+      box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--text-primary) 7%, transparent),
+        0 8px 24px color-mix(in srgb, var(--bg-primary) 50%, transparent);
+      backdrop-filter: blur(10px);
       display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-      gap: 0.32rem;
+      grid-template-rows: auto auto minmax(0, 1.85fr) auto;
+      gap: clamp(0.38rem, 1.15vh, 0.55rem);
       overflow: hidden;
       isolation: isolate;
     }
+    .profile-preview::before {
+      content: '';
+      position: absolute;
+      inset-inline: 0.65rem;
+      top: 0;
+      height: 1px;
+      border-radius: 999px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--accent-primary) 65%, transparent) 50%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
     .offer-head {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 0.45rem;
+      gap: 0.55rem;
       min-width: 0;
-      min-height: 1.35rem;
+      min-height: 1.45rem;
+      padding-bottom: 0.08rem;
     }
     .offer-head-main {
       display: flex;
@@ -582,64 +664,57 @@ import {
       color: var(--text-muted);
       line-height: 1.1;
     }
-    .offer-chips {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 0.22rem;
+    .offer-meta-ht {
       flex-shrink: 0;
     }
-    .plan-chip {
-      font-size: 0.54rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      padding: 0.12rem 0.38rem;
-      border-radius: var(--radius-full);
-      color: var(--accent-primary);
-      border: 1px solid color-mix(in srgb, var(--accent-primary) 40%, transparent);
-      background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+    .offer-head-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.38rem;
+      flex-shrink: 0;
+      margin-left: auto;
+      min-width: 0;
+    }
+    .offer-price-note {
+      font-size: 0.58rem;
+      line-height: 1.2;
+      color: var(--text-muted);
+      font-style: italic;
       white-space: nowrap;
     }
     .meta-pill {
       font-size: 0.54rem;
       font-weight: 600;
-      padding: 0.1rem 0.34rem;
+      padding: 0.14rem 0.42rem;
       border-radius: var(--radius-full);
-      border: 1px solid var(--border-color);
+      border: 1px solid color-mix(in srgb, var(--border-color) 75%, var(--accent-primary));
       color: var(--text-secondary);
-      background: color-mix(in srgb, var(--bg-primary) 45%, transparent);
+      background: color-mix(in srgb, var(--bg-primary) 38%, var(--bg-elevated));
       white-space: nowrap;
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 5%, transparent);
     }
-    .role-intro {
+    .role-intro-blurb {
       margin: 0;
-      min-height: 2.65rem;
-      font-size: 0.64rem;
-      line-height: 1.32;
-      color: var(--text-secondary);
+      padding-inline: clamp(0.25rem, 2vw, 1.25rem);
+      font-size: clamp(0.62rem, 1.05vw, 0.68rem);
+      line-height: 1.45;
+      color: color-mix(in srgb, var(--text-muted) 88%, var(--text-secondary));
+      text-align: center;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
-    }
-    .role-intro-note {
-      display: block;
-      margin-top: 0.12rem;
-      font-size: 0.6rem;
-      color: var(--text-muted);
-    }
-    .role-intro-note em {
-      font-style: normal;
-      font-weight: 700;
-      color: var(--accent-primary);
     }
     .offer-plans {
       min-height: 0;
       overflow: hidden;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.32rem;
+      gap: clamp(0.35rem, 1vw, 0.52rem);
       align-items: stretch;
+      align-self: stretch;
+      padding-block: 0.08rem;
     }
     .offer-plan {
       position: relative;
@@ -648,13 +723,18 @@ import {
       overflow: hidden;
       display: grid;
       grid-template-rows: auto auto minmax(0, 1fr) auto;
-      gap: 0.2rem;
-      padding: 0.38rem 0.42rem 0.42rem;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      background: var(--bg-elevated);
+      gap: 0.22rem;
+      padding: 0.42rem 0.44rem 0.44rem;
+      border: 1px solid color-mix(in srgb, var(--border-color) 88%, var(--accent-primary));
+      border-radius: calc(var(--radius-sm) + 1px);
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--bg-elevated) 98%, var(--accent-primary)) 0%,
+        var(--bg-elevated) 100%
+      );
       cursor: pointer;
       user-select: none;
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-primary) 45%, transparent);
       transition:
         border-color var(--duration-base) var(--ease-standard),
         background var(--duration-base) var(--ease-standard),
@@ -686,9 +766,15 @@ import {
       box-shadow: 0 1px 5px color-mix(in srgb, var(--accent-primary) 8%, transparent);
     }
     .offer-plan.is-featured {
-      border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--border-color));
-      background: color-mix(in srgb, var(--accent-primary) 6%, var(--bg-elevated));
-      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+      border-color: color-mix(in srgb, var(--accent-primary) 58%, var(--border-color));
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--accent-primary) 10%, var(--bg-elevated)) 0%,
+        color-mix(in srgb, var(--accent-primary) 4%, var(--bg-elevated)) 100%
+      );
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent-primary) 20%, transparent),
+        0 6px 20px color-mix(in srgb, var(--accent-primary) 12%, transparent);
     }
     .offer-plan.is-active {
       border-color: var(--accent-primary);
@@ -713,12 +799,13 @@ import {
     }
     .offer-plan-head {
       position: relative;
-      min-height: 2rem;
-      padding-top: 0.1rem;
+      min-height: 0;
+      padding-top: 0.08rem;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      gap: 0.06rem;
+      gap: 0.04rem;
+      flex-shrink: 0;
     }
     .offer-badge {
       position: absolute;
@@ -739,7 +826,9 @@ import {
       font-weight: 700;
       color: var(--text-primary);
       line-height: 1.1;
-      min-height: 0.8rem;
+    }
+    .offer-plan.is-featured .offer-plan-head {
+      min-height: 1.35rem;
     }
     .offer-plan.is-featured h4 {
       padding-right: 3.1rem;
@@ -749,11 +838,10 @@ import {
       font-size: 0.54rem;
       color: var(--text-muted);
       line-height: 1.1;
-      min-height: 0.6rem;
     }
     .offer-price {
       margin: 0;
-      min-height: 1.15rem;
+      flex-shrink: 0;
       display: flex;
       flex-wrap: wrap;
       align-items: baseline;
@@ -771,19 +859,19 @@ import {
     }
     .offer-highlights {
       margin: 0;
-      padding-left: 0.75rem;
-      font-size: 0.54rem;
-      line-height: 1.28;
+      padding-left: 0.85rem;
+      font-size: 0.56rem;
+      line-height: 1.32;
       color: var(--text-secondary);
       overflow: hidden;
-      min-height: calc(0.54rem * 1.28 * 6 + 0.04rem * 5);
+      min-height: 0;
       align-self: stretch;
     }
     .offer-highlights li {
-      min-height: calc(0.54rem * 1.28);
+      min-height: 0;
     }
     .offer-highlights li + li {
-      margin-top: 0.04rem;
+      margin-top: 0.05rem;
     }
     .offer-highlights li.is-slot-empty {
       visibility: hidden;
@@ -792,18 +880,26 @@ import {
       width: 100%;
       min-height: 1.75rem;
       height: 1.75rem;
-      margin-top: auto;
-      padding: 0.2rem 0.35rem;
+      margin-top: 0;
+      padding: 0.22rem 0.38rem;
       font-size: 0.58rem;
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       align-self: end;
+      flex-shrink: 0;
+      border-radius: calc(var(--radius-sm) - 1px);
       transition:
         background var(--duration-fast) var(--ease-standard),
         border-color var(--duration-fast) var(--ease-standard),
-        color var(--duration-fast) var(--ease-standard);
+        color var(--duration-fast) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard),
+        transform var(--duration-fast) var(--ease-standard);
+    }
+    .offer-plan:hover .offer-plan-cta.btn-primary,
+    .offer-plan.is-active .offer-plan-cta.btn-primary {
+      box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-primary) 28%, transparent);
     }
     .offer-plan:hover .offer-plan-cta.btn-ghost {
       border-color: color-mix(in srgb, var(--accent-primary) 35%, var(--border-strong));
@@ -817,57 +913,82 @@ import {
     .offer-modules {
       min-height: 0;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0.26rem;
+      flex-shrink: 0;
+      align-self: stretch;
+      padding-top: 0.2rem;
     }
-    .offer-section-label {
-      margin: 0 0 0.22rem;
-      font-size: 0.54rem;
+    .offer-section-title {
+      margin: 0;
+      padding: 0.1rem 0.25rem 0.12rem;
+      font-family: var(--font-display);
+      font-size: 0.66rem;
       font-weight: 700;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: var(--accent-primary);
+      color: var(--text-primary);
+      line-height: 1.15;
+      letter-spacing: 0.01em;
+      text-align: center;
     }
     .offer-modules-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      grid-auto-rows: 1fr;
-      gap: 0.28rem;
-      min-height: 3.35rem;
+      grid-auto-rows: auto;
+      gap: 0.3rem;
+      min-height: 0;
+      padding: 0.14rem 0.1rem 0.1rem;
     }
     .offer-tile {
       min-width: 0;
-      min-height: 3.35rem;
+      min-height: 0;
       overflow: hidden;
-      padding: 0.28rem 0.34rem;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-color);
-      background: var(--bg-elevated);
+      padding: 0.3rem 0.34rem 0.32rem;
+      margin: 0.04rem;
+      border-radius: calc(var(--radius-sm) + 1px);
+      border: 1px solid color-mix(in srgb, var(--border-color) 88%, var(--accent-primary));
+      background: linear-gradient(
+        165deg,
+        color-mix(in srgb, var(--bg-elevated) 96%, var(--accent-primary)) 0%,
+        var(--bg-elevated) 100%
+      );
       display: flex;
       flex-direction: column;
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-primary) 42%, transparent);
+      transition:
+        border-color var(--duration-fast) var(--ease-standard),
+        background var(--duration-fast) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard),
+        transform var(--duration-fast) var(--ease-standard);
+    }
+    .offer-tile:hover {
+      border-color: color-mix(in srgb, var(--accent-primary) 35%, var(--border-color));
+      background: color-mix(in srgb, var(--accent-primary) 5%, var(--bg-elevated));
+      box-shadow: 0 5px 16px color-mix(in srgb, var(--accent-primary) 10%, transparent);
+      transform: translateY(-1px);
     }
     .tile-kicker {
       display: block;
-      margin-bottom: 0.08rem;
-      min-height: 0.55rem;
-      font-size: 0.48rem;
+      margin-bottom: 0.04rem;
+      font-size: 0.46rem;
       font-weight: 700;
       letter-spacing: 0.07em;
       text-transform: uppercase;
       color: var(--accent-primary);
+      line-height: 1.1;
     }
     .offer-tile h4 {
-      margin: 0 0 0.08rem;
+      margin: 0 0 0.04rem;
       font-family: var(--font-display);
-      font-size: 0.64rem;
+      font-size: 0.62rem;
       font-weight: 700;
       color: var(--text-primary);
       line-height: 1.1;
-      min-height: 0.72rem;
     }
     .offer-tile p {
       margin: 0;
-      flex: 1;
-      font-size: 0.54rem;
-      line-height: 1.28;
+      font-size: 0.52rem;
+      line-height: 1.24;
       color: var(--text-secondary);
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -882,56 +1003,51 @@ import {
     .offer-tile a:hover {
       text-decoration: underline;
     }
-    .offer-foot {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.45rem;
-      min-height: 1.35rem;
-      padding-top: 0.28rem;
-      border-top: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
-      font-size: 0.56rem;
-      color: var(--text-muted);
-      min-width: 0;
-    }
-    .offer-foot span {
-      min-width: 0;
-      line-height: 1.25;
-    }
-    .offer-foot-link {
-      appearance: none;
-      border: 0;
-      background: transparent;
-      padding: 0;
-      font: inherit;
-      font-size: 0.58rem;
-      font-weight: 700;
-      color: var(--accent-primary);
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .offer-foot-link:hover {
-      text-decoration: underline;
-    }
     .signup-actions {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.28rem;
       flex-shrink: 0;
       position: relative;
       z-index: 1;
+      padding-top: 0.18rem;
     }
     .signup-actions .auth-btn {
-      min-height: 2.1rem;
-      font-size: 0.82rem;
+      min-height: 2.25rem;
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      box-shadow:
+        0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent),
+        0 8px 22px color-mix(in srgb, var(--accent-primary) 26%, transparent);
+      transition:
+        transform var(--duration-fast) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard),
+        filter var(--duration-fast) var(--ease-standard);
+    }
+    .signup-actions .auth-btn:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent),
+        0 12px 28px color-mix(in srgb, var(--accent-primary) 34%, transparent);
+      filter: brightness(1.04);
+    }
+    .signup-actions .auth-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-primary) 22%, transparent);
     }
     @media (prefers-reduced-motion: reduce) {
-      .offer-plan {
+      .offer-plan,
+      .offer-tile,
+      .profile-trigger,
+      .signup-actions .auth-btn {
         transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease;
       }
       .offer-plan:hover,
-      .offer-plan.is-active {
+      .offer-plan.is-active,
+      .offer-tile:hover,
+      .profile-trigger:hover,
+      .signup-actions .auth-btn:hover {
         transform: none;
       }
     }
@@ -967,12 +1083,19 @@ export class LoginPage implements OnInit {
   readonly locale = inject(LocaleService);
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly profileDropdown = viewChild<ElementRef<HTMLElement>>('profileDropdown');
   readonly roles = AUDIENCE_ROLES;
   readonly highlightSlots = MAX_PLAN_HIGHLIGHTS;
   readonly selectedRoleId = signal<AudienceRoleId>('association');
   readonly selectedRole = computed(() => audienceById(this.selectedRoleId()));
   readonly selectedPlanCode = signal('');
+  readonly continueSignupParams = computed(() => {
+    const params: Record<string, string> = { role: this.selectedRoleId() };
+    const plan = this.selectedPlanCode();
+    if (plan) params['plan'] = plan;
+    return params;
+  });
   readonly menuOpen = signal(false);
   readonly showDemo = environment.showDemoCredentials;
   readonly oauthEnabled = signal(false);
@@ -983,7 +1106,15 @@ export class LoginPage implements OnInit {
 
   ngOnInit(): void {
     document.documentElement.lang = this.locale.locale();
+    const roleParam = this.route.snapshot.queryParamMap.get('role');
+    const planParam = this.route.snapshot.queryParamMap.get('plan');
+    if (isAudienceRoleId(roleParam)) {
+      this.selectedRoleId.set(roleParam);
+    }
     this.syncSelectedPlan();
+    if (planParam && this.selectedRole().plans.some((p) => p.code === planParam)) {
+      this.selectedPlanCode.set(planParam);
+    }
     void this.loadOAuthStatus();
   }
 

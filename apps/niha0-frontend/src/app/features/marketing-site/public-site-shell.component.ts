@@ -5,7 +5,7 @@ import { filter, map, startWith } from 'rxjs';
 import { LocaleService } from '../../core/i18n/locale.service';
 
 /**
- * Chrome partagé des pages publiques (landing, auth guest, legal, pricing).
+ * Chrome partagé des pages publiques (landing, auth guest, legal, use-cases).
  * Manifesto + header NIHAO + footer légal — même look que localhost:/
  */
 @Component({
@@ -40,7 +40,17 @@ import { LocaleService } from '../../core/i18n/locale.service';
       <header class="top">
         <a routerLink="/" class="brand" [attr.aria-label]="isHome() ? 'NIHAO' : 'NIHAO — Retour à l’accueil'">NIHAO</a>
         <nav>
-          <a routerLink="/pricing">{{ locale.t('pricing') }}</a>
+          @if (isHome()) {
+            <a routerLink="/login" class="shell-continue-link">Continuer vers l’inscription →</a>
+          } @else if (continueSignupParams) {
+            <a
+              [routerLink]="['/register']"
+              [queryParams]="continueSignupParams"
+              class="shell-continue-link"
+            >
+              Continuer vers l’inscription →
+            </a>
+          }
           <a routerLink="/login" class="btn btn-ghost">{{ locale.t('signInCta') }}</a>
         </nav>
       </header>
@@ -161,6 +171,34 @@ import { LocaleService } from '../../core/i18n/locale.service';
       gap: 0.75rem;
       align-items: center;
       flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .shell-continue-link {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      padding: 0.15rem 0;
+      font-family: var(--font-body, system-ui, sans-serif);
+      font-size: clamp(0.72rem, 1.2vw, 0.82rem);
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--accent-primary);
+      text-decoration: none;
+      white-space: nowrap;
+      cursor: pointer;
+      transition:
+        color 0.15s ease,
+        transform 0.15s ease;
+    }
+    .shell-continue-link:hover {
+      text-decoration: underline;
+      transform: translateX(2px);
+      color: var(--accent-primary);
+    }
+    .shell-continue-link:focus-visible {
+      outline: 2px solid var(--accent-primary);
+      outline-offset: 3px;
+      border-radius: 4px;
     }
     nav a:not(.btn) {
       color: var(--text-primary);
@@ -247,6 +285,9 @@ import { LocaleService } from '../../core/i18n/locale.service';
       .foot {
         animation: none;
       }
+      .shell-continue-link:hover {
+        transform: none;
+      }
     }
   `,
 })
@@ -259,6 +300,9 @@ export class PublicSiteShellComponent {
 
   /** Reserved for denser legal layouts (no visual change yet beyond hook). */
   @Input() compact = false;
+
+  /** Login page — lien inscription avec profil / plan sélectionnés. */
+  @Input() continueSignupParams: Record<string, string> | null = null;
 
   readonly manifestoWords = ['NOT', 'FOR', 'HUMAN', 'CONCEPTION'].map((word) => word.split(''));
 
