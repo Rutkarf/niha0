@@ -47,6 +47,7 @@ class OAuth2SsoTest {
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
         assertThat(body.get("enabled").asBoolean()).isFalse();
         assertThat(body.get("providers")).isEmpty();
+        assertThat(body.get("demoMode").asBoolean()).isFalse();
     }
 
     @Test

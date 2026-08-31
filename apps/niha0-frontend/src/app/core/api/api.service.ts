@@ -453,8 +453,10 @@ export class ApiService {
     return this.http.post<{ message: string }>(`${this.base}/auth/forgot-password`, { email });
   }
 
-  getOAuth2Status(): Observable<{ enabled: boolean; providers: string[] }> {
-    return this.http.get<{ enabled: boolean; providers: string[] }>(`${this.base}/auth/oauth2/status`);
+  getOAuth2Status(): Observable<{ enabled: boolean; providers: string[]; demoMode: boolean }> {
+    return this.http.get<{ enabled: boolean; providers: string[]; demoMode: boolean }>(
+      `${this.base}/auth/oauth2/status`,
+    );
   }
 
   exchangeSsoCode(code: string, options?: { withCredentials?: boolean }): Observable<TokenResponse> {

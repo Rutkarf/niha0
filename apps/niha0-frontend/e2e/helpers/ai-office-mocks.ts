@@ -102,7 +102,11 @@ export async function installAiOfficeApiMocks(page: Page): Promise<void> {
     }
 
     if (method === 'GET' && path === '/auth/oauth2/status') {
-      return json(route, { enabled: false, providers: [] });
+      return json(route, {
+        enabled: true,
+        demoMode: true,
+        providers: ['google', 'microsoft', 'github', 'linkedin', 'facebook', 'discord', 'apple', 'amazon'],
+      });
     }
 
     if (method === 'POST' && path === '/auth/sso/exchange') {

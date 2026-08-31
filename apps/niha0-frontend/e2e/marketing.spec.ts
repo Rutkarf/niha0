@@ -14,6 +14,7 @@ test.describe('Marketing surfaces', () => {
   test('sign-in exposes audience profiles', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('link', { name: /Continuer vers l'inscription/i })).toBeVisible();
+    await expect(page.locator('.oauth-provider-btn')).toHaveCount(8);
     await expect(page.getByRole('heading', { name: /Se connecter|Sign in|Connexion|Login/i }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: /Créer un espace/i })).toBeVisible();
     await page.locator('#profile-trigger').click();

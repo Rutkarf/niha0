@@ -21,7 +21,9 @@ niha0:
     secret: test-secret-key-for-unit-tests-minimum-256-bits-required!!
   oauth2:
     enabled: false
+    demo-mode: false
   security:
+    demo-login-enabled: false
     auth-rate-limit-enabled: false
     os-api-rate-limit-enabled: false
   billing:

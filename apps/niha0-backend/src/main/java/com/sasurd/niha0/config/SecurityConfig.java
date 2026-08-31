@@ -88,7 +88,7 @@ public class SecurityConfig {
                     auth.requestMatchers("/auth/login", "/auth/register", "/auth/refresh",
                                     "/auth/forgot-password", "/auth/reset-password", "/auth/accept-invite",
                                     "/auth/mfa/verify", "/auth/oauth2/status", "/auth/sso/exchange",
-                                    "/auth/oauth2/**", "/oauth2/**", "/login/oauth2/**")
+                                    "/auth/oauth2/demo/**", "/auth/oauth2/**", "/oauth2/**", "/login/oauth2/**")
                             .permitAll()
                             .requestMatchers("/billing/webhooks/sumup").permitAll()
                             .requestMatchers("/actuator/health").permitAll()
@@ -143,6 +143,7 @@ public class SecurityConfig {
                     || path.contains("/auth/accept-invite")
                     || path.contains("/auth/mfa/verify")
                     || path.contains("/auth/oauth2/status")
+                    || path.contains("/auth/oauth2/demo/")
                     || path.contains("/auth/sso/exchange")
                     || path.contains("/oauth2/")
                     || path.contains("/login/oauth2/")) {

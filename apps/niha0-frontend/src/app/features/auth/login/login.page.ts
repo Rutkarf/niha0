@@ -18,6 +18,8 @@ import { LocaleService } from '../../../core/i18n/locale.service';
 import { environment } from '../../../../environments/environment';
 import { PublicSiteShellComponent } from '../../marketing-site/public-site-shell.component';
 import { PUBLIC_AUTH_STYLES } from '../../marketing-site/public-content.styles';
+import { OAuthProviderIconComponent } from '../oauth-provider-icon.component';
+import { OAUTH_PROVIDERS, OAuthProviderDef, OAuthProviderId } from '../oauth-providers';
 import {
   AUDIENCE_ROLES,
   AudienceRoleId,
@@ -28,7 +30,7 @@ import {
 
 @Component({
   selector: 'app-login-page',
-  imports: [FormsModule, RouterLink, PublicSiteShellComponent],
+  imports: [FormsModule, RouterLink, PublicSiteShellComponent, OAuthProviderIconComponent],
   template: `
     <app-public-site-shell pageTitle="Connexion" [continueSignupParams]="continueSignupParams()">
       <div class="auth-wrap login-split">
@@ -38,13 +40,6 @@ import {
             <h2 id="login-title">{{ locale.t('login') }}</h2>
             <p>Accédez à votre espace NIHAO</p>
           </header>
-
-          @if (oauthEnabled()) {
-            <button type="button" class="btn btn-oauth" (click)="loginWithGoogle()">
-              Continuer avec Google
-            </button>
-            <p class="divider"><span>ou e-mail</span></p>
-          }
 
           <form (ngSubmit)="submit()" class="auth-form" novalidate>
             <div class="form-group">
@@ -81,6 +76,21 @@ import {
             <p class="forgot-row">
               <a routerLink="/forgot-password">{{ locale.t('forgotPassword') }}</a>
             </p>
+            <div class="oauth-row" role="group" aria-label="Connexion avec un compte externe">
+              @for (provider of oauthProviders; track provider.id) {
+                <button
+                  type="button"
+                  class="oauth-provider-btn"
+                  [class.is-ready]="isOAuthProviderEnabled(provider.id)"
+                  [disabled]="!isOAuthProviderEnabled(provider.id)"
+                  [attr.title]="oauthProviderTitle(provider)"
+                  [attr.aria-label]="'Continuer avec ' + provider.label"
+                  (click)="loginWithOAuth(provider.id)"
+                >
+                  <app-oauth-provider-icon [providerId]="provider.id" />
+                </button>
+              }
+            </div>
             @if (error()) {
               <p id="login-error" class="error" role="alert">{{ error() }}</p>
             }
@@ -267,6 +277,11 @@ import {
       width: 100%;
       max-width: none;
     }
+    .login-split .signin-panel.auth-card {
+      max-height: min(26rem, 68vh);
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
     .login-split .signup-panel.auth-card {
       border-color: color-mix(in srgb, var(--border-color) 72%, var(--accent-primary));
       box-shadow:
@@ -277,21 +292,12 @@ import {
     .signup-panel {
       width: 100%;
       min-height: 0;
-      overflow: hidden;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
     }
-    .signin-panel {
-      align-self: center;
-      max-height: 50%;
-      height: auto;
-      padding: 0.7rem 0.8rem;
-      justify-content: flex-start;
-      gap: 0.35rem;
-      overflow: hidden;
-    }
     .signup-panel {
+      overflow: hidden;
       align-self: stretch;
       max-height: 100%;
       height: 100%;
@@ -299,6 +305,17 @@ import {
         clamp(0.75rem, 1.5vh, 0.95rem);
       gap: clamp(0.55rem, 1.3vh, 0.75rem);
       isolation: isolate;
+    }
+    .signin-panel {
+      align-self: center;
+      max-height: min(26rem, 68vh);
+      height: auto;
+      padding: 0.55rem 0.75rem 0.7rem;
+      justify-content: flex-start;
+      gap: 0.28rem;
+      overflow-x: hidden;
+      overflow-y: auto;
+      flex-shrink: 0;
     }
     .panel-kicker {
       margin: 0 0 0.15rem;
@@ -326,12 +343,58 @@ import {
       min-height: 0;
     }
     .signin-panel .form-group {
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.32rem;
     }
-    .signin-panel .auth-btn,
-    .signin-panel .btn-oauth {
+    .signin-panel .auth-btn {
       min-height: 2rem;
       font-size: 0.8rem;
+      margin-top: 0.08rem;
+      flex-shrink: 0;
+    }
+    .oauth-row {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 0.24rem;
+      margin: 0.2rem 0 0.32rem;
+    }
+    .oauth-provider-btn {
+      appearance: none;
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: 2.15rem;
+      aspect-ratio: 1;
+      margin: 0;
+      padding: 0.28rem;
+      border: 1px solid #dadce0;
+      border-radius: var(--radius-sm);
+      background: #ffffff;
+      color: #202124;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgb(60 64 67 / 18%);
+      transition:
+        border-color var(--duration-fast) var(--ease-standard),
+        background var(--duration-fast) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard),
+        transform var(--duration-fast) var(--ease-standard),
+        opacity var(--duration-fast) var(--ease-standard);
+    }
+    .oauth-provider-btn:has(.brand-logo) {
+      padding-inline: 0.14rem;
+      padding-block: 0.32rem;
+    }
+    .oauth-provider-btn.is-ready:hover {
+      border-color: #c6c6c6;
+      background: #f8f9fa;
+      box-shadow: 0 2px 6px rgb(60 64 67 / 22%);
+      transform: translateY(-1px);
+    }
+    .oauth-provider-btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
     .signin-panel .divider {
       margin: 0.4rem 0;
@@ -339,6 +402,9 @@ import {
     .demo-hint {
       margin: 0.35rem 0 0;
       flex-shrink: 0;
+    }
+    .signin-panel .demo-hint {
+      margin-bottom: 0.05rem;
     }
     .signup-panel .auth-header {
       flex-shrink: 0;
@@ -1040,6 +1106,7 @@ import {
       .offer-plan,
       .offer-tile,
       .profile-trigger,
+      .oauth-provider-btn,
       .signup-actions .auth-btn {
         transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease;
       }
@@ -1047,6 +1114,7 @@ import {
       .offer-plan.is-active,
       .offer-tile:hover,
       .profile-trigger:hover,
+      .oauth-provider-btn.is-ready:hover,
       .signup-actions .auth-btn:hover {
         transform: none;
       }
@@ -1087,6 +1155,7 @@ export class LoginPage implements OnInit {
   private readonly profileDropdown = viewChild<ElementRef<HTMLElement>>('profileDropdown');
   readonly roles = AUDIENCE_ROLES;
   readonly highlightSlots = MAX_PLAN_HIGHLIGHTS;
+  readonly oauthProviders = OAUTH_PROVIDERS;
   readonly selectedRoleId = signal<AudienceRoleId>('association');
   readonly selectedRole = computed(() => audienceById(this.selectedRoleId()));
   readonly selectedPlanCode = signal('');
@@ -1097,8 +1166,9 @@ export class LoginPage implements OnInit {
     return params;
   });
   readonly menuOpen = signal(false);
+  readonly oauthEnabledProviders = signal<ReadonlySet<string>>(new Set());
+  readonly oauthDemoMode = signal(false);
   readonly showDemo = environment.showDemoCredentials;
-  readonly oauthEnabled = signal(false);
   readonly showPwd = signal(false);
   email = this.showDemo ? 'rutkarf@optimustest.fr' : '';
   password = this.showDemo ? 'Demo2026!' : '';
@@ -1172,8 +1242,28 @@ export class LoginPage implements OnInit {
     this.selectedPlanCode.set(featured?.code ?? '');
   }
 
-  loginWithGoogle(): void {
-    window.location.href = `${environment.apiUrl}/oauth2/authorization/google`;
+  loginWithOAuth(providerId: OAuthProviderId): void {
+    if (!this.isOAuthProviderEnabled(providerId)) {
+      return;
+    }
+    const path = this.oauthDemoMode()
+      ? `/auth/oauth2/demo/${providerId}`
+      : `/oauth2/authorization/${providerId}`;
+    window.location.href = `${environment.apiUrl}${path}`;
+  }
+
+  isOAuthProviderEnabled(providerId: OAuthProviderId): boolean {
+    return this.oauthEnabledProviders().has(providerId);
+  }
+
+  oauthProviderTitle(provider: { id: OAuthProviderId; label: string }): string {
+    if (this.oauthDemoMode()) {
+      return `Continuer avec ${provider.label} (démo)`;
+    }
+    if (this.isOAuthProviderEnabled(provider.id)) {
+      return `Continuer avec ${provider.label}`;
+    }
+    return `${provider.label} — configurez ${provider.id.toUpperCase()}_CLIENT_ID et ${provider.id.toUpperCase()}_CLIENT_SECRET`;
   }
 
   async submit(): Promise<void> {
@@ -1192,9 +1282,18 @@ export class LoginPage implements OnInit {
   private async loadOAuthStatus(): Promise<void> {
     try {
       const status = await firstValueFrom(this.api.getOAuth2Status());
-      this.oauthEnabled.set(status.enabled && status.providers.includes('google'));
+      this.oauthDemoMode.set(status.demoMode);
+      this.oauthEnabledProviders.set(
+        new Set(status.enabled ? status.providers : []),
+      );
     } catch {
-      this.oauthEnabled.set(false);
+      if (this.showDemo) {
+        this.oauthDemoMode.set(true);
+        this.oauthEnabledProviders.set(new Set(this.oauthProviders.map((p: OAuthProviderDef) => p.id)));
+      } else {
+        this.oauthDemoMode.set(false);
+        this.oauthEnabledProviders.set(new Set());
+      }
     }
   }
 }

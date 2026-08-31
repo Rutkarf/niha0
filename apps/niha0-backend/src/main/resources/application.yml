@@ -111,6 +111,7 @@ niha0:
     public-url: ${APP_PUBLIC_URL:http://localhost:4200}
   oauth2:
     enabled: ${OAUTH2_ENABLED:false}
+    demo-mode: ${OAUTH2_DEMO_MODE:${DEMO_LOGIN_ENABLED:true}}
   realtime:
     mode: ${REALTIME_MODE:memory} # memory|redis
     redis-url: ${NIHA0_REALTIME_REDIS_URL:}
